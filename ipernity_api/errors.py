@@ -1,4 +1,8 @@
 class IpernityError(Exception):
+    pass
+
+
+class IpernityAPIError(IpernityError):
     """ Exception for Ipernity API Errors
 
     Parameters:
@@ -18,6 +22,6 @@ class IpernityError(Exception):
     message: str
         Error message
     """
-        Exception.__init__(self, "%i : %s" % (code, message))
+        IpernityError.__init__(self, "%i : %s" % (code, message))
         self.code = code
         self.message = message

@@ -13,7 +13,7 @@ class RESTTest(TestCase):
         self.assertEquals(resp['echo'], echo)
 
     def test_call_api_raise(self):
-        with self.assertRaises(errors.IpernityError):
+        with self.assertRaises(errors.IpernityAPIError):
             method = 'unknow_method'
             # send an unknow request, should raise Exception
             rest.call_api(method, api_key=API_KEY)

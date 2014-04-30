@@ -1,6 +1,6 @@
 import urllib
 import json
-from .errors import IpernityError
+from .errors import IpernityError, IpernityAPIError
 
 
 def call_api(method, **kwargs):
@@ -16,7 +16,10 @@ def call_api(method, **kwargs):
     data = urllib.urlencode(kwargs)
     url = "http://api.ipernity.com/api/%s/%s" % (method, 'json')
     # send the request
-    resp_raw = urllib.urlopen(url, data).read()
+    try:
+        resp_raw = urllib.urlopen(url, data).read()
+    except Exception, e:
+        raise IpernityError(str(e))
 
     # parse the result
     resp = json.loads(resp_raw)
@@ -25,6 +28,6 @@ def call_api(method, **kwargs):
     if api['status'] == 'error':
         err_mesg = api['message']
         err_code = int(api['code'])
-        raise IpernityError(err_code, err_mesg)
+        raise IpernityAPIError(err_code, err_mesg)
 
     return resp
