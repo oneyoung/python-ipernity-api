@@ -33,3 +33,12 @@ class RESTTest(TestCase):
         # set back keys, should be OK now
         keys.set_keys(api_key, api_secret)
         rest.call_api(method)
+
+    def test_call_api_signed(self):
+        method = 'auth.getFrob'
+        # calling to a signed method without signed request should recive exception
+        with self.assertRaisesRegexp(errors.IpernityAPIError, 'Signature'):
+            rest.call_api(method)
+
+        # this time should OK
+        rest.call_api(method, signed=True)
