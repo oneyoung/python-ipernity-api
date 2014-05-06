@@ -127,3 +127,49 @@ class DesktopAuthHandler(AuthHandler):
 
     def get_auth_url(self):
         return self.compose_url(frob=self.frob)
+
+try:
+    from oauth import oauth
+except ImportError:
+    import oauth
+import urlparse
+
+
+class OAuthAuthHandler(AuthHandler):
+    def __init__(self, callback, *arg, **kwarg):
+        AuthHandler.__init__(self, *arg, **kwarg)
+        self.callback = callback
+        self.verified = False
+        # first get a oauth token
+        self.oauth_token = self._request(REQUEST_TOKEN_URL)
+
+    def _request(self, url, token=None):
+        ''' fire the request to url, and return the OAuthToken '''
+        params = {
+            'oauth_consumer_key': self.api_key,
+            'oauth_signature_method': 'HMAC-SHA1',
+            'oauth_timestamp': oauth.generate_timestamp(),
+            'oauth_nonce': oauth.generate_nonce(),
+            'oauth_callback': self.callback,
+        }
+        consumer = oauth.OAuthConsumer(self.api_key, self.api_secret)
+        req = oauth.OauthRequest(http_method='GET',
+                                 http_url=url,
+                                 paramters=params)
+        req.sign_request(oauth.OAuthSignatureMethod_HMAC_SHA1,
+                         consumer, token)
+        resp = urllib.urlopen(req.to_url())
+        oauth_token_resp = dict(urlparse.parse_qsl(resp.read()))
+        return oauth.OAuthToken(
+            oauth_token_resp['oauth_token'],
+            oauth_token_resp['oauth_token_secret'])
+
+    def get_auth_url(self):
+        query = self.oauth_token.to_string() + urllib.urlencode(self.perms)
+        url = USER_AUTH_URL + '?' + query
+        return url
+
+    def verify(self):
+        ''' verify the access token '''
+        self.oauth_token = self._request(ACCESS_TOKEN_URL, self.oauth_token)
+        self.verified = True
