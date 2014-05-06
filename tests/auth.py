@@ -19,7 +19,11 @@ class AuthTest(TestCase):
         perms.pop('perm_blog')
 
     def test_get_url(self):
-        perms = {'perm_doc': 'write'}
-        handler = auth.AuthHandler(perms=perms)
-        url = handler.get_auth_url()
-        url, frob = handler.get_frob_auth_url()
+        def test_class(cls):
+            perms = {'perm_doc': 'write'}
+            handler = cls(perms=perms)
+            url = handler.get_auth_url()
+            self.assertIsNotNone(url)
+
+        test_class(auth.WebAuthHanlder)
+        test_class(auth.DesktopAuthHandler)

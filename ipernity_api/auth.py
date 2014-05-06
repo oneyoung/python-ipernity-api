@@ -62,16 +62,23 @@ class AuthHandler(object):
 
         self.frob = None
 
-    def get_auth_url(self, frob=None):
+    def get_auth_url(self):
         ''' get auth url
 
-        If optional paramter 'frob' provided, will return frob auth url
+        this method need to be overrided
+        '''
+
+    def compose_url(self, **kwarg):
+        ''' compose url for auth
+
+        parameters:
+            **kwarg: additional parameters can be provided,
+                for example: frob, callback
         '''
         params = {}
-        params['api_key'] = self.api_key
-        params.update(self.perms)
-        if frob:
-            params['frob'] = frob
+        params['api_key'] = self.api_key  # add api_key
+        params.update(self.perms)  # append permissions
+        params.update(kwarg)  # additional parameters
         # auth url need api_sig
         query = urllib.urlencode(params)
         api_sig = rest.sign_keys(self.api_secret, query)
@@ -80,11 +87,36 @@ class AuthHandler(object):
         url = USER_AUTH_URL + '?' + query
         return url
 
-    def get_frob_auth_url(self):
-        ''' get auth_url with frob
 
-        return (auth_url, frob)
-        '''
+class WebAuthHanlder(AuthHandler):
+    '''WebAuthHanlder: auth class for web application
+
+    Steps:
+        1. Redirect the user to the authentication page
+        2. Get back the frob
+        3. Exchange the frob for a token
+
+    Note: web callback URL is registered in ipernity.com
+    when applying for API key
+    (Authentication method: Web)
+
+    Once authenticated, the member (its browser) is automatically
+    redirected to your callback URL with the frob parameter.
+    For example: http://www.yoursite.com/callback.php?frob=123456789-0ad5e2a8
+    This frob is a disposable one-time use authentication ticket.
+    This ticket remains valid for a few minutes only and must be exchanged
+    for an auth_token authentication token .
+    '''
+    def get_auth_url(self):
+        return self.compose_url()
+
+
+class DesktopAuthHandler(AuthHandler):
+    '''DesktopAuthHandler: auth class for non-web application which has no callback.
+    '''
+    def __init__(self, *args, **kwarg):
+        AuthHandler.__init__(self, *args, **kwarg)
+        # get frob
         resp = rest.call_api('auth.getFrob',
                              api_key=self.api_key,
                              api_secret=self.api_secret,
@@ -93,4 +125,5 @@ class AuthHandler(object):
         frob = resp['auth']['frob']
         self.frob = frob
 
-        return self.get_auth_url(frob), frob
+    def get_auth_url(self):
+        return self.compose_url(frob=self.frob)
