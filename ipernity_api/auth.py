@@ -128,48 +128,126 @@ class DesktopAuthHandler(AuthHandler):
     def get_auth_url(self):
         return self.compose_url(frob=self.frob)
 
-try:
-    from oauth import oauth
-except ImportError:
-    import oauth
 import urlparse
+import random
+import time
+
+
+def escape(s):
+    """Escape a URL including any /."""
+    return urllib.quote(s, safe='~')
+
+
+def _utf8_str(s):
+    """Convert unicode to utf-8."""
+    if isinstance(s, unicode):
+        return s.encode("utf-8")
+    else:
+        return str(s)
+
+
+def generate_nonce(length=8):
+    """Generate pseudorandom number."""
+    return ''.join([str(random.randint(0, 9)) for i in range(length)])
+
+
+def generate_timestamp():
+    """Get seconds since epoch (UTC)."""
+    return str(int(time.time()))
 
 
 class OAuthAuthHandler(AuthHandler):
-    def __init__(self, callback, *arg, **kwarg):
+    def __init__(self, callback=None, *arg, **kwarg):
         AuthHandler.__init__(self, *arg, **kwarg)
         self.callback = callback
         self.verified = False
         # first get a oauth token
-        self.oauth_token = self._request(REQUEST_TOKEN_URL)
+        self._request(REQUEST_TOKEN_URL)
 
-    def _request(self, url, token=None):
-        ''' fire the request to url, and return the OAuthToken '''
+    @staticmethod
+    def _normalized_parameters(params):
+        """Return a string that contains the parameters that must be signed."""
+        try:
+            # Exclude the signature if it exists.
+            del params['oauth_signature']
+        except:
+            pass
+        # Escape key values before sorting.
+        key_values = [(escape(_utf8_str(k)), escape(_utf8_str(v)))
+                      for k, v in params.items()]
+        # Sort lexicographically, first after key, then after value.
+        key_values.sort()
+        # Combine key value pairs into a string.
+        return '&'.join(['%s=%s' % (k, v) for k, v in key_values])
+
+    def _build_signature(self, url, params, token=None):
+        ''' signature OAuth request '''
+        # private key to signature
+        # consist of "consumer secret&token secret"
+        key = '%s&' % escape(self.api_secret)
+        if token:
+            key += escape(token)
+        # string to be signed consist of 3 parts:
+        # 1. HTTP request method, uppercase, i.e. HEAD, GET, POST
+        # 2. request URL
+        # 3. normalized request parameters
+        # Each item is encoded and separated by an '&' character
+        sig = ('GET',
+               url,
+               self._normalized_parameters(params))
+        raw = '&'.join(map(escape, sig))
+        # HMAC object.
+        import hmac
+        import binascii
+
+        try:
+            import hashlib  # 2.5
+            hashed = hmac.new(key, raw, hashlib.sha1)
+        except:
+            import sha  # Deprecated
+            hashed = hmac.new(key, raw, sha)
+
+        # Calculate the digest base 64.
+        return binascii.b2a_base64(hashed.digest())[:-1]
+
+    def _request(self, url, verify=False):
+        ''' fire the request to url, and save the oauth token
+
+        if token given, this is a access token verify request.
+        '''
         params = {
             'oauth_consumer_key': self.api_key,
             'oauth_signature_method': 'HMAC-SHA1',
-            'oauth_timestamp': oauth.generate_timestamp(),
-            'oauth_nonce': oauth.generate_nonce(),
-            'oauth_callback': self.callback,
+            'oauth_timestamp': generate_timestamp(),
+            'oauth_nonce': generate_nonce(),
         }
-        consumer = oauth.OAuthConsumer(self.api_key, self.api_secret)
-        req = oauth.OauthRequest(http_method='GET',
-                                 http_url=url,
-                                 paramters=params)
-        req.sign_request(oauth.OAuthSignatureMethod_HMAC_SHA1,
-                         consumer, token)
-        resp = urllib.urlopen(req.to_url())
+        # callback is not needed when do verify
+        if self.callback and not verify:
+            params['oauth_callback'] = self.callback
+        if verify:  # verify the oauth_token
+            params['oauth_token'] = self.oauth_token
+            token_secret = self.oauth_token_secret
+        else:
+            token_secret = None
+        # get signature
+        oauth_signature = self._build_signature(url, params, token_secret)
+        params['oauth_signature'] = oauth_signature
+        # compose URL
+        req_url = url + '?' + urllib.urlencode(params)
+        # send request and save auth token
+        resp = urllib.urlopen(req_url)
         oauth_token_resp = dict(urlparse.parse_qsl(resp.read()))
-        return oauth.OAuthToken(
-            oauth_token_resp['oauth_token'],
-            oauth_token_resp['oauth_token_secret'])
+        self.oauth_token = oauth_token_resp['oauth_token']
+        self.oauth_token_secret = oauth_token_resp['oauth_token_secret']
 
     def get_auth_url(self):
-        query = self.oauth_token.to_string() + urllib.urlencode(self.perms)
-        url = USER_AUTH_URL + '?' + query
+        params = {}
+        params['oauth_token'] = self.oauth_token
+        params.update(self.perms)
+        url = USER_AUTH_URL + '?' + urllib.urlencode(params)
         return url
 
     def verify(self):
         ''' verify the access token '''
-        self.oauth_token = self._request(ACCESS_TOKEN_URL, self.oauth_token)
+        self._request(ACCESS_TOKEN_URL, verify=True)
         self.verified = True
