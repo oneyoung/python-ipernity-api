@@ -1,15 +1,19 @@
 import urllib
+import urllib2
 import json
 import hashlib
 from .errors import IpernityError, IpernityAPIError
 from . import keys
 
 
-def call_api(method, api_key=None, api_secret=None, signed=False, **kwargs):
+def call_api(api_method, api_key=None, api_secret=None, signed=False,
+             http_post=True, **kwargs):
     ''' file request to ipernity API
 
     Parameters:
         method: The API method you want to call
+        http_post: if set True, would use POST method, otherwise, GET
+            some methods only support GET request, for example: api.methods.get
 
     Default:
         * always send request with POST method
@@ -26,21 +30,31 @@ def call_api(method, api_key=None, api_secret=None, signed=False, **kwargs):
 
     data = urllib.urlencode(kwargs)
     if signed:  # signature
-        api_sig = sign_keys(api_secret, data, method)
+        api_sig = sign_keys(api_secret, data, api_method)
         data += '&api_sig=%s' % api_sig
-    url = "http://api.ipernity.com/api/%s/%s" % (method, 'json')
+    url = "http://api.ipernity.com/api/%s/%s" % (api_method, 'json')
     # send the request
     try:
-        resp_raw = urllib.urlopen(url, data).read()
+        # we use urllib2 here, since urllib has some problem when response is
+        # over 8k size
+        if http_post:  # POST
+            resp_raw = urllib2.urlopen(url, data).read()
+        else:  # GET
+            url += '?' + data
+            resp_raw = urllib2.urlopen(url).read()
     except Exception, e:
         raise IpernityError(str(e))
-
     # parse the result
-    resp = json.loads(resp_raw)
+    try:
+        resp = json.loads(resp_raw)
+    except ValueError, e:
+        raise IpernityError('Json decode error at: %s WITH Payload:\n%s' % (str(e), resp_raw))
     # check the response, if error happends, raise exception
     api = resp['api']
     if api['status'] == 'error':
         err_mesg = api['message']
+        # add more info to err_mesg
+        err_mesg += '\nAPI: %s \nPayload: %s' % (api_method, data)
         err_code = int(api['code'])
         raise IpernityAPIError(err_code, err_mesg)
 
