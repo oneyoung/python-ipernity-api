@@ -7,11 +7,13 @@ from . import keys
 
 
 def call_api(api_method, api_key=None, api_secret=None, signed=False,
-             http_post=True, **kwargs):
+             authed=False, http_post=True, **kwargs):
     ''' file request to ipernity API
 
     Parameters:
         method: The API method you want to call
+        signed: if request need to add signature
+        authed: if user auth needed
         http_post: if set True, would use POST method, otherwise, GET
             some methods only support GET request, for example: api.methods.get
 
