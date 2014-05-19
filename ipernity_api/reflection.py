@@ -42,3 +42,38 @@ def call(api_method):
         return wrapper
 
     return decorator
+
+
+class StaticCaller(staticmethod):
+    def __init__(self, func):
+        staticmethod.__init__(self, func)
+        self.__dict__ = func.__dict__
+        self.inner_func = func
+
+
+def static_call(api_method):
+    ''' call decorator for static method
+
+    The same as 'call' decorator, except it design for class static method
+    '''
+
+    def decorator(func):
+        try:
+            info = __methods__[api_method]
+        except KeyError:
+            raise IpernityError('Method %s not found' % api_method)
+        auth_info = info['authentication']
+        # partial object for this api call
+        request = partial(call_api, api_method,
+                          authed=auth_info['token'],
+                          http_post=auth_info['post'],
+                          signed=auth_info['sign'])
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            params, format_result = func(*args, **kwargs)
+            resp = request(**params)
+            return format_result(resp)
+        return StaticCaller(wrapper)
+
+    return decorator
