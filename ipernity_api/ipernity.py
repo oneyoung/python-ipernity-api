@@ -16,6 +16,9 @@ class IpernityList(UserList):
 
 
 class IpernityObject(object):
+    def __init__(self, **params):
+        self._set_props(**params)
+
     def __getitem__(self, key):
         return self.__dict__[key]
 
@@ -39,3 +42,13 @@ class Test(IpernityObject):
     @static_call('test.hello')
     def hello(**kwargs):
         return kwargs, extract('hello')
+
+
+class User(IpernityObject):
+    @static_call('user.get')
+    def get(**kwargs):
+        return kwargs, lambda r: User(**r['user'])
+
+    @static_call('account.getQuota')
+    def getQuota(**kwargs):
+        return kwargs, extract('quota')
