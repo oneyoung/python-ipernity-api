@@ -26,6 +26,7 @@ http://www.ipernity.com/apps/authorize?api_key=[api_key]&perm_X=[perm]&frob=[fro
 
 '''
 import urllib
+from abs import abstractmethod
 from . import keys
 from . import rest
 
@@ -62,6 +63,7 @@ class AuthHandler(object):
 
         self.frob = None
 
+    @abstractmethod
     def get_auth_url(self):
         ''' get auth url
 
@@ -86,6 +88,15 @@ class AuthHandler(object):
         # composite url
         url = USER_AUTH_URL + '?' + query
         return url
+
+    def getToken(self, frob):
+        ''' get token from frob '''
+        resp = rest.call_api('auth.getToken',
+                             api_key=self.api_key,
+                             api_secret=self.api_secret,
+                             frob=frob,
+                             signed=True)
+        return resp['auth']
 
 
 class WebAuthHanlder(AuthHandler):
