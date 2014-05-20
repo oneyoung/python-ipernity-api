@@ -54,6 +54,7 @@ docs/_build/
 
 # vim
 *.swp
+*.swo
 
 # protect privicate keys for testing
 ipernity_api/ipernity_keys.py

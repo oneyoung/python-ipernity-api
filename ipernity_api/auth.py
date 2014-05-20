@@ -26,6 +26,7 @@ http://www.ipernity.com/apps/authorize?api_key=[api_key]&perm_X=[perm]&frob=[fro
 
 '''
 import urllib
+import json
 from abc import abstractmethod
 from . import keys
 from . import rest
@@ -40,7 +41,7 @@ class AuthError(Exception):
 
 
 class AuthHandler(object):
-    def __init__(self, api_key=None, api_secret=None, perms=None):
+    def __init__(self, api_key=None, api_secret=None, perms=None, auth_token=None):
         '''
         Parameters:
             perms: is a dict consist of 'TYPE': 'read/write/delete'
@@ -60,8 +61,38 @@ class AuthHandler(object):
                 if perms[k] not in perm_modes:
                     raise AuthError('Unknown permission mode %s for %s' % (perms[k], k))
         self.perms = perms
+        self.auth_token = auth_token
 
         self.frob = None
+
+    def getmeta(self):
+        ''' get meta info about AuthHandler '''
+        return {
+            'api_key': self.api_key,
+            'api_secret': self.api_secret,
+            'perms': self.perms,
+            'auth_token': self.auth_token,
+        }
+
+    def save(self, fname):
+        ''' save Handler to a file '''
+        fp = open(fname, 'w')
+        data = {
+            'class': self.__class__.__name__,
+            'meta': self.getmeta(),
+        }
+        fp.write(json.dumps(data))
+        fp.close()
+
+    @staticmethod
+    def load(fname):
+        ''' Hanlder loaded from file '''
+        data = json.loads(open(fname).read())
+        meta = data['meta']
+        classname = data['class']
+        # find the class through globals() and init with **meta, then return
+        # auth handler instance
+        return globals()[classname](**meta)
 
     @abstractmethod
     def get_auth_url(self):
@@ -127,8 +158,7 @@ class WebAuthHanlder(AuthHandler):
 class DesktopAuthHandler(AuthHandler):
     '''DesktopAuthHandler: auth class for non-web application which has no callback.
     '''
-    def __init__(self, *args, **kwarg):
-        AuthHandler.__init__(self, *args, **kwarg)
+    def _get_frob(self):
         # get frob
         resp = rest.call_api('auth.getFrob',
                              api_key=self.api_key,
@@ -136,9 +166,11 @@ class DesktopAuthHandler(AuthHandler):
                              signed=True)
         # TODO: should we create a AUTH object here
         frob = resp['auth']['frob']
-        self.frob = frob
+        return frob
 
     def get_auth_url(self):
+        if not self.frob:
+            self.frob = self._get_frob()
         return self.compose_url(frob=self.frob)
 
 import urlparse
@@ -170,12 +202,12 @@ def generate_timestamp():
 
 
 class OAuthAuthHandler(AuthHandler):
-    def __init__(self, callback=None, *arg, **kwarg):
+    def __init__(self, callback=None, oauth_token=None, oauth_token_secret=None,
+                 *arg, **kwarg):
         AuthHandler.__init__(self, *arg, **kwarg)
         self.callback = callback
-        self.verified = False
-        # first get a oauth token
-        self._request(REQUEST_TOKEN_URL)
+        self.oauth_token = oauth_token
+        self.oauth_token_secret = oauth_token_secret
 
     @staticmethod
     def _normalized_parameters(params):
@@ -254,6 +286,9 @@ class OAuthAuthHandler(AuthHandler):
         self.oauth_token_secret = oauth_token_resp['oauth_token_secret']
 
     def get_auth_url(self):
+        # first get a oauth token
+        self._request(REQUEST_TOKEN_URL)
+        # compose the url
         params = {}
         params['oauth_token'] = self.oauth_token
         params.update(self.perms)
@@ -263,4 +298,11 @@ class OAuthAuthHandler(AuthHandler):
     def verify(self):
         ''' verify the access token '''
         self._request(ACCESS_TOKEN_URL, verify=True)
-        self.verified = True
+
+    def getmeta(self):
+        # Oauth need to save oauth_token_secret too
+        meta = AuthHandler.getmeta(self)
+        meta.pop('auth_token')
+        meta['oauth_token'] = self.oauth_token
+        meta['oauth_token_secret'] = self.oauth_token_secret
+        return meta

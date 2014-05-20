@@ -30,7 +30,24 @@ class AuthTest(TestCase):
 
     def _test_oauth(self):
         perms = {'doc': 'write'}
-        auth_in_browser(auth.OAuthAuthHandler, perms)
+        fpath = '/tmp/ipernity_auth_tmp'
+        handler = auth_in_browser(auth.OAuthAuthHandler, perms)
+        # save handler
+        handler.save(fpath)
+        # load handler
+        new_hdlr = auth.AuthHandler.load(fpath)
+        self.assertIsNotNone(new_hdlr)
+
+    def _test_desktop_auth(self):
+        perms = {'doc': 'write'}
+        fpath = '/tmp/ipernity_auth_tmp'
+        #TODO: web said frob is invalid, wired
+        handler = auth_in_browser(auth.DesktopAuthHandler, perms)
+        # save handler
+        handler.save(fpath)
+        # load handler
+        new_hdlr = auth.AuthHandler.load(fpath)
+        self.assertIsNotNone(new_hdlr)
 
 
 def auth_in_browser(auth_cls, perms):
@@ -43,7 +60,10 @@ def auth_in_browser(auth_cls, perms):
     redirt_url = "http://localhost:%s" % port
 
     # get auth url
-    auth_handler = auth_cls(callback=redirt_url, perms=perms)
+    if auth_cls is auth.OAuthAuthHandler:
+        auth_handler = auth_cls(callback=redirt_url, perms=perms)
+    else:
+        auth_handler = auth_cls(perms=perms)
     url = auth_handler.get_auth_url()
     # open url in browser
     import webbrowser
@@ -60,7 +80,7 @@ def auth_in_browser(auth_cls, perms):
             q = urlparse.parse_qs(p.query)
             #auth_token = q['oauth_token'][0]
             #auth_verifier = q['oauth_verifier'][0]
-            print q
+            print (q)
             # save back to auth handler
             auth_handler.verify()
             # send response to webpage
