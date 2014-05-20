@@ -1,8 +1,12 @@
+import os
 from unittest import TestCase
 from ipernity_api import auth
+from ipernity_api import rest
 
 
 class AuthTest(TestCase):
+    oauth_file = '/tmp/ipernity_auth_tmp'
+
     def test_instance_init(self):
         perms = {'doc': 'read'}
         # this should OK
@@ -28,14 +32,23 @@ class AuthTest(TestCase):
         test_class(auth.WebAuthHanlder)
         test_class(auth.DesktopAuthHandler)
 
+    def test_authed_request(self):
+        if not os.path.exists(self.oauth_file):
+            self._test_oauth()
+        oauth_handler = auth.AuthHandler.load(self.oauth_file)
+        rest.call_api('account.getQuota',
+                      authed=True,
+                      auth_handler=oauth_handler)
+
     def _test_oauth(self):
-        perms = {'doc': 'write'}
-        fpath = '/tmp/ipernity_auth_tmp'
+        perms = {'doc': 'delete',
+                 'blog': 'delete',
+                 'network': 'delete', }
         handler = auth_in_browser(auth.OAuthAuthHandler, perms)
         # save handler
-        handler.save(fpath)
+        handler.save(self.oauth_file)
         # load handler
-        new_hdlr = auth.AuthHandler.load(fpath)
+        new_hdlr = auth.AuthHandler.load(self.oauth_file)
         self.assertIsNotNone(new_hdlr)
 
     def _test_desktop_auth(self):

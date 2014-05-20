@@ -225,7 +225,7 @@ class OAuthAuthHandler(AuthHandler):
         # Combine key value pairs into a string.
         return '&'.join(['%s=%s' % (k, v) for k, v in key_values])
 
-    def _build_signature(self, url, params, token=None):
+    def _build_signature(self, url, params, token=None, post=False):
         ''' signature OAuth request '''
         # private key to signature
         # consist of "consumer secret&token secret"
@@ -237,7 +237,7 @@ class OAuthAuthHandler(AuthHandler):
         # 2. request URL
         # 3. normalized request parameters
         # Each item is encoded and separated by an '&' character
-        sig = ('GET',
+        sig = ('POST' if post else 'GET',
                url,
                self._normalized_parameters(params))
         raw = '&'.join(map(escape, sig))
@@ -247,7 +247,7 @@ class OAuthAuthHandler(AuthHandler):
 
         try:
             import hashlib  # 2.5
-            hashed = hmac.new(key, raw, hashlib.sha1)
+            hashed = hmac.new(_utf8_str(key), raw, hashlib.sha1)
         except:
             import sha  # Deprecated
             hashed = hmac.new(key, raw, sha)
@@ -291,7 +291,8 @@ class OAuthAuthHandler(AuthHandler):
         # compose the url
         params = {}
         params['oauth_token'] = self.oauth_token
-        params.update(self.perms)
+        perms = {'perm_' + k: v for k, v in self.perms.items()}
+        params.update(perms)
         url = USER_AUTH_URL + '?' + urllib.urlencode(params)
         return url
 
@@ -306,3 +307,31 @@ class OAuthAuthHandler(AuthHandler):
         meta['oauth_token'] = self.oauth_token
         meta['oauth_token_secret'] = self.oauth_token_secret
         return meta
+
+    def sign_params(self, url, kwargs, post=False):
+        ''' accept request parameters and return Oauth signed paramters
+
+        Parameters:
+        -----
+            url: request url
+            kwargs:
+        '''
+        # Oauth basic params
+        params = {
+            'oauth_consumer_key': self.api_key,
+            'oauth_token': self.oauth_token,
+            'oauth_signature_method': 'HMAC-SHA1',
+            'oauth_timestamp': generate_timestamp(),
+            'oauth_nonce': generate_nonce(),
+        }
+        # add input params
+        try:
+            kwargs.pop('api_key')
+        except KeyError:
+            pass
+        params.update(kwargs)
+        # get signature
+        oauth_signature = self._build_signature(url, params, self.oauth_token_secret, post)
+        params['oauth_signature'] = oauth_signature
+
+        return params

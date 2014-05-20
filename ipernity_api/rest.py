@@ -7,7 +7,7 @@ from . import keys
 
 
 def call_api(api_method, api_key=None, api_secret=None, signed=False,
-             authed=False, http_post=True, **kwargs):
+             authed=False, http_post=True, auth_handler=None, **kwargs):
     ''' file request to ipernity API
 
     Parameters:
@@ -30,11 +30,19 @@ def call_api(api_method, api_key=None, api_secret=None, signed=False,
         raise IpernityError('No Ipernity API keys been set')
     kwargs['api_key'] = api_key
 
-    data = urllib.urlencode(kwargs)
-    if signed:  # signature
-        api_sig = sign_keys(api_secret, data, api_method)
-        data += '&api_sig=%s' % api_sig
     url = "http://api.ipernity.com/api/%s/%s" % (api_method, 'json')
+    if authed:
+        from . import auth
+        if not auth_handler:
+            raise IpernityError('no auth_handler provided')
+        if isinstance(auth_handler, auth.OAuthAuthHandler):
+            kwargs = auth_handler.sign_params(url, kwargs, http_post)
+            data = urllib.urlencode(kwargs)
+    else:
+        data = urllib.urlencode(kwargs)
+        if signed:  # signature
+            api_sig = sign_keys(api_secret, data, api_method)
+            data += '&api_sig=%s' % api_sig
     # send the request
     try:
         # we use urllib2 here, since urllib has some problem when response is
