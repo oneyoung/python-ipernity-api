@@ -26,7 +26,7 @@ http://www.ipernity.com/apps/authorize?api_key=[api_key]&perm_X=[perm]&frob=[fro
 
 '''
 import urllib
-from abs import abstractmethod
+from abc import abstractmethod
 from . import keys
 from . import rest
 
@@ -43,8 +43,8 @@ class AuthHandler(object):
     def __init__(self, api_key=None, api_secret=None, perms=None):
         '''
         Parameters:
-            perms: is a dict consist of 'perm_xxx': 'read/write/delete'
-                perm_xxx can be: perm_doc, perm_blog, perm_network, perm_profile
+            perms: is a dict consist of 'TYPE': 'read/write/delete'
+                TYPE can be: doc, blog, network, profile
         '''
         self.api_key = api_key or keys.API_KEY
         self.api_secret = api_secret or keys.API_SECRET
@@ -52,7 +52,7 @@ class AuthHandler(object):
             raise AuthError('No api_key or api_secret given')
 
         if perms:  # sanity check for permissions
-            perm_types = ['perm_doc', 'perm_blog', 'perm_network', 'perm_profile']
+            perm_types = ['doc', 'blog', 'network', 'profile']
             perm_modes = ['read', 'write', 'delete']
             for k in perms.keys():
                 if k not in perm_types:
@@ -79,7 +79,9 @@ class AuthHandler(object):
         '''
         params = {}
         params['api_key'] = self.api_key  # add api_key
-        params.update(self.perms)  # append permissions
+        # need to add 'perm_' prefix to permission type
+        perms = {'perm_' + k: v for k, v in self.perms.items()}
+        params.update(perms)  # append permissions
         params.update(kwarg)  # additional parameters
         # auth url need api_sig
         query = urllib.urlencode(params)

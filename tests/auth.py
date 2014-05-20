@@ -4,23 +4,23 @@ from ipernity_api import auth
 
 class AuthTest(TestCase):
     def test_instance_init(self):
-        perms = {'perm_doc': 'read'}
+        perms = {'doc': 'read'}
         # this should OK
         auth.AuthHandler(perms=perms)
         # wrong perms type should raise exception
-        perms['perm_unknown'] = 'unkonwn'
+        perms['unknown'] = 'unkonwn'
         with self.assertRaisesRegexp(auth.AuthError, 'permission type'):
             auth.AuthHandler(perms=perms)
-        perms.pop('perm_unknown')
+        perms.pop('unknown')
         # wrong perms mode should also raise exception
-        perms['perm_blog'] = 'wrong_mode'
+        perms['blog'] = 'wrong_mode'
         with self.assertRaisesRegexp(auth.AuthError, 'permission mode'):
             auth.AuthHandler(perms=perms)
-        perms.pop('perm_blog')
+        perms.pop('blog')
 
     def test_get_url(self):
         def test_class(cls):
-            perms = {'perm_doc': 'write'}
+            perms = {'doc': 'write'}
             handler = cls(perms=perms)
             url = handler.get_auth_url()
             self.assertIsNotNone(url)
@@ -29,7 +29,7 @@ class AuthTest(TestCase):
         test_class(auth.DesktopAuthHandler)
 
     def _test_oauth(self):
-        perms = {'perm_doc': 'write'}
+        perms = {'doc': 'write'}
         auth_in_browser(auth.OAuthAuthHandler, perms)
 
 
