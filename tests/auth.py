@@ -1,7 +1,6 @@
 import os
 from unittest import TestCase
-from ipernity_api import auth
-from ipernity_api import rest
+from ipernity_api import auth, rest, errors
 
 
 class AuthTest(TestCase):
@@ -36,9 +35,20 @@ class AuthTest(TestCase):
         if not os.path.exists(self.oauth_file):
             self._test_oauth()
         oauth_handler = auth.AuthHandler.load(self.oauth_file)
+        ohdlr = auth.AUTH_HANDLER
+        auth.set_auth_handler(None)
+        # no auth handler should raise exception
+        with self.assertRaises(errors.IpernityError):
+            rest.call_api('account.getQuota', authed=True)
+        # explcit resign should OK
         rest.call_api('account.getQuota',
                       authed=True,
                       auth_handler=oauth_handler)
+        # set_auth_handler should OK
+        auth.set_auth_handler(oauth_handler)
+        rest.call_api('account.getQuota', authed=True)
+        # restore
+        auth.set_auth_handler(ohdlr)
 
     def _test_oauth(self):
         perms = {'doc': 'delete',

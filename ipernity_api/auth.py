@@ -35,6 +35,8 @@ REQUEST_TOKEN_URL = 'http://www.ipernity.com/apps/oauth/request'
 USER_AUTH_URL = 'http://www.ipernity.com/apps/oauth/authorize'
 ACCESS_TOKEN_URL = 'http://www.ipernity.com/apps/oauth/access'
 
+AUTH_HANDLER = None
+
 
 class AuthError(Exception):
     pass
@@ -335,3 +337,8 @@ class OAuthAuthHandler(AuthHandler):
         params['oauth_signature'] = oauth_signature
 
         return params
+
+
+def set_auth_handler(handler):
+    global AUTH_HANDLER
+    AUTH_HANDLER = handler

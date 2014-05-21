@@ -33,6 +33,7 @@ def call_api(api_method, api_key=None, api_secret=None, signed=False,
     url = "http://api.ipernity.com/api/%s/%s" % (api_method, 'json')
     if authed:
         from . import auth
+        auth_handler = auth_handler or auth.AUTH_HANDLER
         if not auth_handler:
             raise IpernityError('no auth_handler provided')
         if isinstance(auth_handler, auth.OAuthAuthHandler):
