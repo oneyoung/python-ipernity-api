@@ -2,6 +2,7 @@ import os
 from ipernity_api import auth
 
 AUTH_FILE_PATH = '/tmp/ipernity_auto_auth.tmp'
+AUTH_HANDLER = None
 
 
 def auth_in_browser(auth_cls, perms):
@@ -51,7 +52,10 @@ def auth_in_browser(auth_cls, perms):
     return auth_handler
 
 
-def auto_auth(enable=True):
+def auto_auth():
+    global AUTH_HANDLER
+    if AUTH_HANDLER:
+        return
     if not os.path.exists(AUTH_FILE_PATH):
         perms = {'doc': 'delete',
                  'blog': 'delete',
@@ -61,3 +65,4 @@ def auto_auth(enable=True):
         handler.save(AUTH_FILE_PATH)
     handler = auth.AuthHandler.load(AUTH_FILE_PATH)
     auth.set_auth_handler(handler)
+    AUTH_HANDLER = handler
