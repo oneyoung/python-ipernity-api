@@ -1,4 +1,3 @@
-import os
 from unittest import TestCase
 from ipernity_api import auth, rest, errors
 from .utils import auth_in_browser, auto_auth
@@ -60,7 +59,7 @@ class AuthTest(TestCase):
 
     def _test_desktop_auth(self):
         perms = {'doc': 'write'}
-        fpath = '/tmp/ipernity_auth_tmp'
+        fpath = self.oauth_file
         #TODO: web said frob is invalid, wired
         handler = auth_in_browser(auth.DesktopAuthHandler, perms)
         # save handler

@@ -58,3 +58,4 @@ docs/_build/
 
 # protect privicate keys for testing
 ipernity_api/ipernity_keys.py
+.tests.*

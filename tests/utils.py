@@ -1,7 +1,7 @@
 import os
 from ipernity_api import auth
 
-AUTH_FILE_PATH = '/tmp/ipernity_auto_auth.tmp'
+AUTH_FILE_PATH = '.tests.ipernity_auto_auth.tmp'
 AUTH_HANDLER = None
 
 
