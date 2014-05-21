@@ -38,8 +38,27 @@ def get_methods_info():
     for method in get_methods_list():
         resp = rest.call_api('api.methods.get', http_post=False, method=method)
         m = resp['method']
+        m = convert_info(m)
         info[m['name']] = m
     return info
+
+
+def convert_info(m):
+    ''' some preprocess of method info '''
+    # 'error' section contains duplicate much information, and once api call
+    # failure, ipernity would response with error message, so not need to keep
+    # such info.
+    try:
+        m.pop('errors')
+        m.pop('changelog')  # changelog also unnecessary
+    except KeyError:
+        pass
+    # some value are string, need to convert into int
+    m['authentication'] = {k: int(v) if v.isdigit() else v
+                           for k, v in m['authentication'].items()}
+    for param in m['parameters']:
+        param['required'] = int(param.get('required', 0))
+    return m
 
 
 def create_methods_file(filename='methods.py'):
