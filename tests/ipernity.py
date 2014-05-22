@@ -1,6 +1,6 @@
 import datetime
 from unittest import TestCase
-from ipernity_api import ipernity
+from ipernity_api import ipernity, errors
 from . import utils
 
 
@@ -30,3 +30,13 @@ class IpernityTest(TestCase):
         self.assertIsInstance(quota.is_pro, bool)
         left = quota.upload['used']['mb']
         self.assertIsInstance(left, int)
+
+    def test_Album(self):
+        album = ipernity.Album.create(title='This is a album')
+        album_id = album.album_id
+        # new album can be get
+        album = ipernity.Album.get(album_id=album_id)
+        album.delete()
+        # after delete, album shoult not found
+        with self.assertRaisesRegexp(errors.IpernityAPIError, 'Album not found'):
+            ipernity.Album.get(album_id=album_id)

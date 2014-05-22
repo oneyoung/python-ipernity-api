@@ -1,7 +1,7 @@
 import datetime
 from UserList import UserList
 from .errors import IpernityError
-from .reflection import static_call
+from .reflection import call, static_call
 
 
 class IpernityList(UserList):
@@ -45,6 +45,10 @@ def _extract(name):
     return lambda r: r[name]
 
 
+def _none(resp):
+    pass
+
+
 def _dict_str2int(d):
     ''' convert string to int, traverse dict '''
     for k, v in d.items():
@@ -65,7 +69,11 @@ def _dict_conv(conv_func):
 
 
 def _ts2datetime(ts):
-    return datetime.datetime.fromtimestamp(int(ts))
+    # TODO: timestamp might be '0000-00-00 00:00:00'
+    if not ts:
+        return None
+    else:
+        return datetime.datetime.fromtimestamp(int(ts))
 
 
 class Test(IpernityObject):
@@ -105,3 +113,26 @@ class Auth(IpernityObject):
     @static_call('auth.checkToken')
     def get(**kwargs):
         return kwargs, lambda r: Auth(**r['auth'])
+
+
+class Album(IpernityObject):
+    __convertors__ = [
+        (['count'], _dict_conv(int)),
+        (['can'], _dict_conv(bool)),
+        (['dates'], _dict_conv(_ts2datetime)),
+    ]
+
+    @static_call('album.create')
+    def create(**kwargs):
+        return kwargs, lambda r: Album(**r['album'])
+
+    @call('album.delete')
+    def delete(self, **kwargs):
+        kwargs['album_id'] = self.album_id
+        return kwargs, _none
+
+    @static_call('album.get')
+    def get(**kwargs):
+        # API has some bugs, need to auth, otherwise, can't find album.
+        kwargs['force_auth'] = True
+        return kwargs, lambda r: Album(**r['album'])
