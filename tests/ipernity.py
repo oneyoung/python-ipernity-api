@@ -1,3 +1,4 @@
+import datetime
 from unittest import TestCase
 from ipernity_api import ipernity
 from . import utils
@@ -17,7 +18,15 @@ class IpernityTest(TestCase):
         # get user test
         user = ipernity.User.get(user_id=user_id)
         self.assertIsInstance(user, ipernity.User)
+        # filed test
+        self.assertIsInstance(user.is_online, bool)
+        self.assertIsInstance(user.is_closed, bool)
+        # count test
+        self.assertIsInstance(user.count['network'], int)
+        self.assertIsInstance(user.dates['member_since'], datetime.datetime)
+
         # quota test
         quota = user.getQuota()
-        left = quota['upload']['used']['mb']
-        self.assertTrue(left.isdigit())
+        self.assertIsInstance(quota.is_pro, bool)
+        left = quota.upload['used']['mb']
+        self.assertIsInstance(left, int)
