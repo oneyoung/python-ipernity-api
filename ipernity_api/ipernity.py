@@ -99,3 +99,9 @@ class Quota(IpernityObject):
         (['is_pro'], bool),
         (['upload'], _dict_str2int),
     ]
+
+
+class Auth(IpernityObject):
+    @static_call('auth.checkToken')
+    def get(**kwargs):
+        return kwargs, lambda r: Auth(**r['auth'])

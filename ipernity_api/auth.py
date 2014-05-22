@@ -30,6 +30,7 @@ import json
 from abc import abstractmethod
 from . import keys
 from . import rest
+from .ipernity import User, Auth
 
 REQUEST_TOKEN_URL = 'http://www.ipernity.com/apps/oauth/request'
 USER_AUTH_URL = 'http://www.ipernity.com/apps/oauth/authorize'
@@ -132,6 +133,15 @@ class AuthHandler(object):
                              frob=frob,
                              signed=True)
         return resp['auth']
+
+    def getUser(self):
+        ''' get User of this AuthHanlder '''
+        token = getattr(self, 'auth_token') or getattr(self, 'oauth_token')
+        if not token:
+            raise AuthError('No token in Handler')
+        authobj = Auth.get(auth_handler=self, auth_token=token)
+        user_id = authobj.user['user_id']
+        return User(user_id=user_id)
 
 
 class WebAuthHanlder(AuthHandler):

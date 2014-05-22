@@ -1,5 +1,5 @@
 from unittest import TestCase
-from ipernity_api import auth, rest, errors
+from ipernity_api import auth, rest, errors, ipernity
 from .utils import auth_in_browser, auto_auth
 
 
@@ -45,6 +45,12 @@ class AuthTest(TestCase):
         # set_auth_handler should OK
         auth.set_auth_handler(ohdlr)
         rest.call_api('account.getQuota', authed=True)
+
+    def test_getUser(self):
+        auto_auth()
+        handler = auth.AUTH_HANDLER
+        user = handler.getUser()
+        self.assertIsInstance(user, ipernity.User)
 
     def _test_oauth(self):
         perms = {'doc': 'delete',
