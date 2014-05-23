@@ -6,7 +6,7 @@ from .errors import IpernityError, IpernityAPIError
 from . import keys
 
 
-def call_api(api_method, api_key=None, api_secret=None, signed=False, force_auth=False,
+def call_api(api_method, api_key=None, api_secret=None, signed=False,
              authed=False, http_post=True, auth_handler=None, **kwargs):
     ''' file request to ipernity API
 
@@ -14,7 +14,6 @@ def call_api(api_method, api_key=None, api_secret=None, signed=False, force_auth
         method: The API method you want to call
         signed: if request need to add signature
         authed: if user auth needed
-        force_auth: force auth regardless of method info (ipernity has some bugs)
         auth_handler: auth_handler
         http_post: if set True, would use POST method, otherwise, GET
             some methods only support GET request, for example: api.methods.get
@@ -33,7 +32,7 @@ def call_api(api_method, api_key=None, api_secret=None, signed=False, force_auth
     kwargs['api_key'] = api_key
 
     url = "http://api.ipernity.com/api/%s/%s" % (api_method, 'json')
-    if authed or force_auth:
+    if authed:
         from . import auth
         auth_handler = auth_handler or auth.AUTH_HANDLER
         if not auth_handler:

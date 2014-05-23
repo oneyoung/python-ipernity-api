@@ -131,8 +131,6 @@ class Album(IpernityObject):
         kwargs['album_id'] = self.album_id
         return kwargs, _none
 
-    @static_call('album.get')
+    @static_call('album.get', force_auth=True)
     def get(**kwargs):
-        # API has some bugs, need to auth, otherwise, can't find album.
-        kwargs['force_auth'] = True
         return kwargs, lambda r: Album(**r['album'])

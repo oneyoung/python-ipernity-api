@@ -4,11 +4,14 @@ from .errors import IpernityError
 from .rest import call_api
 
 
-def call(api_method):
+def call(api_method, force_auth=False):
     ''' decorator to wrapper api method call for instance method
 
     Parameters:
         api_method: Ipernity method name to be called.
+        force_auth: do auth regardless of method info
+            (ipernity has some bug on api such as 'ablums.get', if not authed,
+            we can't get the album, and always return 'Album not found')
 
     Note:
     * requirement for function:
@@ -30,7 +33,7 @@ def call(api_method):
         auth_info = info['authentication']
         # partial object for this api call
         request = partial(call_api, api_method,
-                          authed=auth_info['token'],
+                          authed=force_auth or auth_info['token'],
                           http_post=auth_info['post'],
                           signed=auth_info['sign'])
 
@@ -51,7 +54,7 @@ class StaticCaller(staticmethod):
         self.inner_func = func
 
 
-def static_call(api_method):
+def static_call(api_method, force_auth=False):
     ''' call decorator for static method
 
     The same as 'call' decorator, except it design for class static method
@@ -65,7 +68,7 @@ def static_call(api_method):
         auth_info = info['authentication']
         # partial object for this api call
         request = partial(call_api, api_method,
-                          authed=auth_info['token'],
+                          authed=force_auth or auth_info['token'],
                           http_post=auth_info['post'],
                           signed=auth_info['sign'])
 
