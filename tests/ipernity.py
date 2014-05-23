@@ -38,6 +38,13 @@ class IpernityTest(TestCase):
         self.assertIsInstance(album.count['docs'], int)
         self.assertIsInstance(album.dates['created_at'], datetime.datetime)
 
+        # edit test
+        new_title = 'New title'
+        new_desc = 'This is a new description'
+        album.edit(title=new_title, description=new_desc)
+        self.assertEquals(album.title, new_title)
+        self.assertEquals(album.description, new_desc)
+
         album_id = album.album_id
         # new album can be get
         album = ipernity.Album.get(album_id=album_id)

@@ -132,11 +132,18 @@ class Album(IpernityObject):
     def create(**kwargs):
         return kwargs, lambda r: Album(**r['album'])
 
+    @static_call('album.get', force_auth=True)
+    def get(**kwargs):
+        return kwargs, lambda r: Album(**r['album'])
+
     @call('album.delete')
     def delete(self, **kwargs):
         kwargs['album_id'] = self.album_id
         return kwargs, _none
 
-    @static_call('album.get', force_auth=True)
-    def get(**kwargs):
-        return kwargs, lambda r: Album(**r['album'])
+    @call('album.edit')
+    def edit(self, **kwargs):
+        # TODO: add cover_id here, update from doc objects
+        kwargs['album_id'] = self.album_id
+        # result should update to self
+        return kwargs, lambda r: self._set_props(**r['album'])
