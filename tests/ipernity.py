@@ -21,6 +21,7 @@ class IpernityTest(TestCase):
         # filed test
         self.assertIsInstance(user.is_online, bool)
         self.assertIsInstance(user.is_closed, bool)
+        self.assertIsInstance(user.is_pro, bool)
         # count test
         self.assertIsInstance(user.count['network'], int)
         self.assertIsInstance(user.dates['member_since'], datetime.datetime)
@@ -33,6 +34,10 @@ class IpernityTest(TestCase):
 
     def test_Album(self):
         album = ipernity.Album.create(title='This is a album')
+        # fields validation
+        self.assertIsInstance(album.count['docs'], int)
+        self.assertIsInstance(album.dates['created_at'], datetime.datetime)
+
         album_id = album.album_id
         # new album can be get
         album = ipernity.Album.get(album_id=album_id)

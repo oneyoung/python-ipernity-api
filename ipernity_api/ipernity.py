@@ -1,4 +1,5 @@
 import datetime
+import re
 from UserList import UserList
 from .errors import IpernityError
 from .reflection import call, static_call
@@ -69,11 +70,17 @@ def _dict_conv(conv_func):
 
 
 def _ts2datetime(ts):
-    # TODO: timestamp might be '0000-00-00 00:00:00'
-    if not ts:
-        return None
-    else:
+    regexp = r'\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d'
+    if ts.isdigit():
         return datetime.datetime.fromtimestamp(int(ts))
+    elif re.match(regexp, ts):
+        try:
+            return datetime.datetime.strptime(ts, '%Y-%m-%d %H:%M:%S')
+        except ValueError:
+        # timestamp might be '0000-00-00 00:00:00', and will raise ValueError
+            return None
+    else:
+        return ts or None
 
 
 class Test(IpernityObject):
@@ -118,7 +125,6 @@ class Auth(IpernityObject):
 class Album(IpernityObject):
     __convertors__ = [
         (['count'], _dict_conv(int)),
-        (['can'], _dict_conv(bool)),
         (['dates'], _dict_conv(_ts2datetime)),
     ]
 
