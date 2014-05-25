@@ -91,6 +91,14 @@ def _ts2datetime(ts):
         return ts or None
 
 
+def _replaceid(kwargs, idname):
+    ''' replace parameter 'id' with real id name 'idname' '''
+    if idname not in kwargs and 'id' in kwargs:
+        idval = kwargs.pop('id')
+        kwargs[idname] = idval
+    return kwargs
+
+
 class Test(IpernityObject):
     @static_call('test.echo')
     def echo(**kwargs):
@@ -111,6 +119,7 @@ class User(IpernityObject):
 
     @static_call('user.get')
     def get(**kwargs):
+        kwargs = _replaceid(kwargs, User.__id__)
         return kwargs, lambda r: User(**r['user'])
 
     @static_call('account.getQuota')
@@ -144,6 +153,7 @@ class Album(IpernityObject):
 
     @static_call('album.get', force_auth=True)
     def get(**kwargs):
+        kwargs = _replaceid(kwargs, Album.__id__)
         return kwargs, lambda r: Album(**r['album'])
 
     @call('album.delete')
@@ -170,6 +180,7 @@ class Folder(IpernityObject):
 
     @static_call('folder.get', force_auth=True)
     def get(**kwargs):
+        kwargs = _replaceid(kwargs, Folder.__id__)
         return kwargs, lambda r: Folder(**r['folder'])
 
     @call('folder.delete')

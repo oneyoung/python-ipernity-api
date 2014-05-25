@@ -16,7 +16,7 @@ class IpernityTest(TestCase):
     def test_User(self):
         user_id = 787135
         # get user test
-        user = ipernity.User.get(user_id=user_id)
+        user = ipernity.User.get(id=user_id)
         self.assertIsInstance(user, ipernity.User)
         # filed test
         self.assertIsInstance(user.is_online, bool)
@@ -45,13 +45,13 @@ class IpernityTest(TestCase):
         self.assertEquals(album.title, new_title)
         self.assertEquals(album.description, new_desc)
 
-        album_id = album.album_id
+        album_id = album.id
         # new album can be get
-        album = ipernity.Album.get(album_id=album_id)
+        album = ipernity.Album.get(id=album_id)
         album.delete()
         # after delete, album shoult not found
         with self.assertRaisesRegexp(errors.IpernityAPIError, 'Album not found'):
-            ipernity.Album.get(album_id=album_id)
+            ipernity.Album.get(id=album_id)
 
 
     def test_Folder(self):
@@ -60,10 +60,10 @@ class IpernityTest(TestCase):
         self.assertIsInstance(folder.count['albums'], int)
         self.assertIsInstance(folder.dates['created_at'], datetime.datetime)
 
-        folder_id = folder.folder_id
+        folder_id = folder.id
         # after created, folder can retrieve by get
-        #folder = ipernity.Folder.get(folder_id=folder_id)
+        #folder = ipernity.Folder.get(id=folder_id)
 
         folder.delete()
         with self.assertRaisesRegexp(errors.IpernityAPIError, 'not found'):
-            ipernity.Folder.get(folder_id=folder_id)
+            ipernity.Folder.get(id=folder_id)
