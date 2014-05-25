@@ -20,6 +20,9 @@ class IpernityList(UserList):
 class IpernityObject(object):
     # convertors is a list of tuple ([attr1, attr2, ...], conv_func)
     __convertors__ = []
+    # attr name that represent object's id in ipernity.com, e,g photo_id, user_id
+    # if present, will add a filed that call 'id'
+    __id__ = ''
 
     def __init__(self, **params):
         self._set_props(**params)
@@ -38,6 +41,11 @@ class IpernityObject(object):
                     params[k] = func(params[k])
                 except KeyError:
                     pass
+        # implement __id__ mechanism
+        idname = self.__class__.__id__
+        if idname:
+            idval = params.get('id') or params.get(idname)
+            params['id'] = params[idname] = idval
         self.__dict__.update(params)
 
 
@@ -94,6 +102,7 @@ class Test(IpernityObject):
 
 
 class User(IpernityObject):
+    __id__ = 'user_id'
     __convertors__ = [
         (['is_pro', 'is_online', 'is_closed'], bool),
         (['count'], _dict_conv(int)),
@@ -123,6 +132,7 @@ class Auth(IpernityObject):
 
 
 class Album(IpernityObject):
+    __id__ = 'album_id'
     __convertors__ = [
         (['count'], _dict_conv(int)),
         (['dates'], _dict_conv(_ts2datetime)),
@@ -138,18 +148,17 @@ class Album(IpernityObject):
 
     @call('album.delete')
     def delete(self, **kwargs):
-        kwargs['album_id'] = self.album_id
         return kwargs, _none
 
     @call('album.edit')
     def edit(self, **kwargs):
         # TODO: add cover_id here, update from doc objects
-        kwargs['album_id'] = self.album_id
         # result should update to self
         return kwargs, lambda r: self._set_props(**r['album'])
 
 
 class Folder(IpernityObject):
+    __id__ = 'folder_id'
     __convertors__ = [
         (['count'], _dict_conv(int)),
         (['dates'], _dict_conv(_ts2datetime)),
@@ -165,5 +174,4 @@ class Folder(IpernityObject):
 
     @call('folder.delete')
     def delete(self, **kwargs):
-        kwargs['folder_id'] = self.folder_id
         return kwargs, _none

@@ -42,6 +42,10 @@ def call(api_method, force_auth=False):
         @wraps(func)
         def wrapper(self, *args, **kwargs):
             params, format_result = func(self, *args, **kwargs)
+            # IpernityObject.__id__ handling
+            idname = self.__class__.__id__
+            if idname and idname not in params:
+                params[idname] = self.id
             resp = request(**params)
             return format_result(resp)
         return wrapper
