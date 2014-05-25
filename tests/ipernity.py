@@ -52,3 +52,18 @@ class IpernityTest(TestCase):
         # after delete, album shoult not found
         with self.assertRaisesRegexp(errors.IpernityAPIError, 'Album not found'):
             ipernity.Album.get(album_id=album_id)
+
+
+    def test_Folder(self):
+        folder = ipernity.Folder.create(title='folder title')
+        # fields type validation
+        self.assertIsInstance(folder.count['albums'], int)
+        self.assertIsInstance(folder.dates['created_at'], datetime.datetime)
+
+        folder_id = folder.folder_id
+        # after created, folder can retrieve by get
+        #folder = ipernity.Folder.get(folder_id=folder_id)
+
+        folder.delete()
+        with self.assertRaisesRegexp(errors.IpernityAPIError, 'not found'):
+            ipernity.Folder.get(folder_id=folder_id)

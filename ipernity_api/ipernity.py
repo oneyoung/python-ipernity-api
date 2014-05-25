@@ -147,3 +147,23 @@ class Album(IpernityObject):
         kwargs['album_id'] = self.album_id
         # result should update to self
         return kwargs, lambda r: self._set_props(**r['album'])
+
+
+class Folder(IpernityObject):
+    __convertors__ = [
+        (['count'], _dict_conv(int)),
+        (['dates'], _dict_conv(_ts2datetime)),
+    ]
+
+    @static_call('folder.create')
+    def create(**kwargs):
+        return kwargs, lambda r: Folder(**r['folder'])
+
+    @static_call('folder.get', force_auth=True)
+    def get(**kwargs):
+        return kwargs, lambda r: Folder(**r['folder'])
+
+    @call('folder.delete')
+    def delete(self, **kwargs):
+        kwargs['folder_id'] = self.folder_id
+        return kwargs, _none

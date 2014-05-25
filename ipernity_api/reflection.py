@@ -5,6 +5,8 @@ from .rest import call_api
 
 
 def call(api_method, force_auth=False):
+    # TODO: albums.get raise Album not found, might be due to has no priviledge.
+    # so need some handling to force_auth
     ''' decorator to wrapper api method call for instance method
 
     Parameters:
