@@ -263,8 +263,27 @@ class Ticket(IpernityObject):
         return Doc.get(id=doc_id)
 
 
+def _conv_you(you):
+    mapping = [
+        ('isfave', bool),
+        ('visits', int),
+        ('last_visit', _ts2datetime),
+    ]
+    for name, func in mapping:
+        if name in you:
+            you[name] = func(you[name])
+    return you
+
+
 class Doc(IpernityObject):
     __id__ = 'doc_id'
+    __convertors__ = [
+        (['dates'], _dict_conv(_ts2datetime)),
+        (['count', 'visibility', 'permissions'], _dict_conv(int)),
+        (['can'], _dict_conv(bool)),
+        (['you'], _conv_you),
+        (['owner'], lambda r: User(**r)),
+    ]
 
     @static_call('doc.get')
     def get(**kwargs):

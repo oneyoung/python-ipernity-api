@@ -79,4 +79,13 @@ class IpernityTest(TestCase):
         #ticket.wait_done()
         #doc = ticket.doc
         doc = ticket.getDoc()
+
+        # doc field test
+        self.assertIsInstance(doc.dates['created'], datetime.datetime)
+        self.assertIsInstance(doc.count['visits'], int)
+        self.assertIsInstance(doc.visibility['share'], int)
+        self.assertIsInstance(doc.can['fave'], bool)
+        self.assertIsInstance(doc.you['visits'], int)
+        self.assertIsInstance(doc.owner, ipernity.User)
+
         doc.delete()
