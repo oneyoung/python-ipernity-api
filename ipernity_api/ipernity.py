@@ -186,3 +186,31 @@ class Folder(IpernityObject):
     @call('folder.delete')
     def delete(self, **kwargs):
         return kwargs, _none
+
+
+class Upload(IpernityObject):
+    @static_call('upload.file')
+    def file(**kwargs):
+        return kwargs, lambda r: Ticket(id=r['ticket'])
+
+    @static_call('upload.checkTickets')
+    def checkTickets(**kwargs):
+        def format_result(resp):
+            info = resp['tickets']
+            tickets = info.pop('ticket')
+            print tickets
+            return IpernityList([Ticket(**t) for t in tickets], info=info)
+
+        if 'tickets' not in kwargs:
+            raise IpernityError('No tickets provided')
+        tickets = kwargs.pop('tickets')
+        kwargs['tickets'] = ','.join([t.id if isinstance(t, Ticket) else t
+                                      for t in tickets])
+        return kwargs, format_result
+
+
+class Ticket(IpernityObject):
+    __convertors__ = [
+        (['done', 'invalid'], bool),
+        (['eta'], int),
+    ]

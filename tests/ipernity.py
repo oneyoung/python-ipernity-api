@@ -1,7 +1,12 @@
+import os
 import datetime
 from unittest import TestCase
 from ipernity_api import ipernity, errors
 from . import utils
+
+
+def getfile(fname):
+    return os.path.join(os.path.dirname(__file__), 'files', fname)
 
 
 class IpernityTest(TestCase):
@@ -53,7 +58,6 @@ class IpernityTest(TestCase):
         with self.assertRaisesRegexp(errors.IpernityAPIError, 'Album not found'):
             ipernity.Album.get(id=album_id)
 
-
     def test_Folder(self):
         folder = ipernity.Folder.create(title='folder title')
         # fields type validation
@@ -62,8 +66,13 @@ class IpernityTest(TestCase):
 
         folder_id = folder.id
         # after created, folder can retrieve by get
+        # TODO: this fail
         #folder = ipernity.Folder.get(id=folder_id)
 
         folder.delete()
         with self.assertRaisesRegexp(errors.IpernityAPIError, 'not found'):
             ipernity.Folder.get(id=folder_id)
+
+    def test_Upload(self):
+        ticket = ipernity.Upload.file(file=getfile('1.jpg'))
+        info = ipernity.Upload.checkTickets(tickets=[ticket])
