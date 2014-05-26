@@ -1,4 +1,5 @@
 import datetime
+import time
 import re
 from UserList import UserList
 from .errors import IpernityError
@@ -20,6 +21,8 @@ class IpernityList(UserList):
 class IpernityObject(object):
     # convertors is a list of tuple ([attr1, attr2, ...], conv_func)
     __convertors__ = []
+    # replace is a list consist of (oldname, newname, conv_func)
+    __replace__ = []
     # attr name that represent object's id in ipernity.com, e,g photo_id, user_id
     # if present, will add a filed that call 'id'
     __id__ = ''
@@ -41,6 +44,13 @@ class IpernityObject(object):
                     params[k] = func(params[k])
                 except KeyError:
                     pass
+        # implement of __replace__
+        for old, new, func in self.__class__.__replace__:
+            try:
+                val = params.pop(old)
+                params[new] = func(val)
+            except KeyError:
+                pass
         # implement __id__ mechanism
         idname = self.__class__.__id__
         if idname:
@@ -198,7 +208,6 @@ class Upload(IpernityObject):
         def format_result(resp):
             info = resp['tickets']
             tickets = info.pop('ticket')
-            print tickets
             return IpernityList([Ticket(**t) for t in tickets], info=info)
 
         if 'tickets' not in kwargs:
@@ -214,3 +223,44 @@ class Ticket(IpernityObject):
         (['done', 'invalid'], bool),
         (['eta'], int),
     ]
+
+    __replace__ = [
+        ('doc_id', 'doc', lambda id: Doc(id=id)),
+    ]
+
+    def refresh(self):
+        new = Upload.checkTickets(tickets=[self])[0]
+        meta = {}
+        for attr in ['done', 'invalid', 'doc_id', 'eta']:
+            if hasattr(new, attr):
+                meta[attr] = getattr(new, attr)
+        if hasattr(new, 'doc'):
+            meta['doc_id'] = new.doc.id
+        return self._set_props(**meta)
+
+    def wait_done(self, timeout=100):
+        ''' wait upload done
+
+        parameters:
+            timeout: optional timeout to specified max wait time, default 100s
+        '''
+        if getattr(self, 'invalid', False):
+            raise IpernityError('Ticket: %s Invalid' % self)
+
+        left = timeout
+        while not getattr(self, 'done', False) and left > 0:  # wait upload complete
+            # first time, Ticket only init with id, not 'eta' field provide
+            eta = getattr(self, 'eta', 0)
+            left -= eta
+            time.sleep(eta)
+            self.refresh()
+        if not getattr(self, 'done', False):
+            raise IpernityError('Timeout for wait done after %ss' % timeout)
+
+
+class Doc(IpernityObject):
+    __id__ = 'doc_id'
+
+    @call('doc.delete')
+    def delete(self, **kwargs):
+        return kwargs, _none
