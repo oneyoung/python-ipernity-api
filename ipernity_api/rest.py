@@ -1,8 +1,10 @@
+import os
 import urllib
 import urllib2
 import json
 import hashlib
 from .errors import IpernityError, IpernityAPIError
+from .multipart import posturl
 from . import keys
 
 
@@ -37,31 +39,31 @@ def call_api(api_method, api_key=None, api_secret=None, signed=False,
         auth_handler = auth_handler or auth.AUTH_HANDLER
         if not auth_handler:
             raise IpernityError('no auth_handler provided')
-        # upload.file and upload.replace both require auth, so put them here
-        isupload = 'file' in kwargs
-        if isupload:
-            fname = kwargs.pop('file')  # 'file' should not include in signature
         if isinstance(auth_handler, auth.OAuthAuthHandler):
             kwargs = auth_handler.sign_params(url, kwargs, http_post)
-        if isupload:
-            kwargs['file'] = open(fname).read()  # add back file
-        data = urllib.urlencode(kwargs)
     else:
         if signed:  # signature handling
             api_sig = sign_keys(api_secret, kwargs, api_method)
             kwargs['api_sig'] = api_sig
-        data = urllib.urlencode(kwargs)
+    data = urllib.urlencode(kwargs)
+
     # send the request
     try:
         # we use urllib2 here, since urllib has some problem when response is
         # over 8k size
         if http_post:  # POST
-            resp_raw = urllib2.urlopen(url, data).read()
+            if 'file' in kwargs:  # upload file handling
+                fpath = kwargs['file']
+                files = [('file', os.path.basename(fpath), open(fpath, 'rb').read())]
+                resp_raw = posturl(url, kwargs.items(), files)
+            else:
+                resp_raw = urllib2.urlopen(url, data).read()
         else:  # GET
             url += '?' + data
             resp_raw = urllib2.urlopen(url).read()
     except Exception, e:
         raise IpernityError(str(e))
+
     # parse the result
     try:
         resp = json.loads(resp_raw)
