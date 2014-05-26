@@ -76,6 +76,7 @@ class IpernityTest(TestCase):
     def test_Upload(self):
         ticket = ipernity.Upload.file(file=getfile('1.jpg'))
         ipernity.Upload.checkTickets(tickets=[ticket])
-        ticket.wait_done()
-        doc = ticket.doc
+        #ticket.wait_done()
+        #doc = ticket.doc
+        doc = ticket.getDoc()
         doc.delete()

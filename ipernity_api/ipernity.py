@@ -257,9 +257,19 @@ class Ticket(IpernityObject):
         if not getattr(self, 'done', False):
             raise IpernityError('Timeout for wait done after %ss' % timeout)
 
+    def getDoc(self):
+        self.wait_done()
+        doc_id = self.doc.id
+        return Doc.get(id=doc_id)
+
 
 class Doc(IpernityObject):
     __id__ = 'doc_id'
+
+    @static_call('doc.get')
+    def get(**kwargs):
+        kwargs = _replaceid(kwargs, Doc.__id__)
+        return kwargs, lambda r: Doc(**r['doc'])
 
     @call('doc.delete')
     def delete(self, **kwargs):
