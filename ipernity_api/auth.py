@@ -104,6 +104,10 @@ class AuthHandler(object):
         this method need to be overrided
         '''
 
+    @abstractmethod
+    def sign_params(*args, **kwargs):
+        ''' sign paramters '''
+
     def compose_url(self, **kwarg):
         ''' compose url for auth
 

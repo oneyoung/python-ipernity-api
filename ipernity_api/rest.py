@@ -37,9 +37,15 @@ def call_api(api_method, api_key=None, api_secret=None, signed=False,
         auth_handler = auth_handler or auth.AUTH_HANDLER
         if not auth_handler:
             raise IpernityError('no auth_handler provided')
+        # upload.file and upload.replace both require auth, so put them here
+        isupload = kwargs.has_key('file')
+        if isupload:
+            fname = kwargs.pop('file')  # 'file' should not include in signature
         if isinstance(auth_handler, auth.OAuthAuthHandler):
             kwargs = auth_handler.sign_params(url, kwargs, http_post)
-            data = urllib.urlencode(kwargs)
+        if isupload:
+            kwargs['file'] = open(fname).read()  # add back file
+        data = urllib.urlencode(kwargs)
     else:
         data = urllib.urlencode(kwargs)
         if signed:  # signature
