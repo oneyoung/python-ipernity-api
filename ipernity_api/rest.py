@@ -38,7 +38,7 @@ def call_api(api_method, api_key=None, api_secret=None, signed=False,
         if not auth_handler:
             raise IpernityError('no auth_handler provided')
         # upload.file and upload.replace both require auth, so put them here
-        isupload = kwargs.has_key('file')
+        isupload = 'file' in kwargs
         if isupload:
             fname = kwargs.pop('file')  # 'file' should not include in signature
         if isinstance(auth_handler, auth.OAuthAuthHandler):
@@ -47,10 +47,10 @@ def call_api(api_method, api_key=None, api_secret=None, signed=False,
             kwargs['file'] = open(fname).read()  # add back file
         data = urllib.urlencode(kwargs)
     else:
+        if signed:  # signature handling
+            api_sig = sign_keys(api_secret, kwargs, api_method)
+            kwargs['api_sig'] = api_sig
         data = urllib.urlencode(kwargs)
-        if signed:  # signature
-            api_sig = sign_keys(api_secret, data, api_method)
-            data += '&api_sig=%s' % api_sig
     # send the request
     try:
         # we use urllib2 here, since urllib has some problem when response is
@@ -79,13 +79,13 @@ def call_api(api_method, api_key=None, api_secret=None, signed=False,
     return resp
 
 
-def sign_keys(api_secret, data, method=None):
+def sign_keys(api_secret, kwargs, method=None):
     ''' request signature: Some API methods require signature.
     Support Request signature and Authorization link signature
 
     Parameters:
         api_secret: api_secret key
-        data: api parameters encode by urlencode
+        kwargs: api parameters to be signed
         method: if provided, request signature, otherwise auth link signature
 
     The request signature corresponds to the md5 of a string
@@ -95,12 +95,13 @@ def sign_keys(api_secret, data, method=None):
         the called method, (for Request Signature)
         your API key secret.
 
-    Note: must guarantee the order of API parameters, otherwise, md5 would change.
-    so we use data already encode by urlencode,
-    using dict is not a good idea here, because order of iter might change.
+    Note: kwargs would be sorted in alphabetical order when convert to string
     '''
     # filter out special char '?&='
-    sig_str = ''.join(filter(lambda c: c not in '?&=', data))
+    #sig_str = ''.join(filter(lambda c: c not in '?&=', data))
+    param_keys = kwargs.keys()
+    param_keys.sort()
+    sig_str = ''.join(['%s%s' % (k, kwargs[k]) for k in param_keys])
     # append method & api_secret
     sig_str = sig_str + (method if method else '') + api_secret
     api_sig = hashlib.md5(sig_str).hexdigest()

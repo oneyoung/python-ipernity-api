@@ -122,9 +122,9 @@ class AuthHandler(object):
         params.update(perms)  # append permissions
         params.update(kwarg)  # additional parameters
         # auth url need api_sig
+        api_sig = rest.sign_keys(self.api_secret, params)
+        params['api_sig'] = api_sig
         query = urllib.urlencode(params)
-        api_sig = rest.sign_keys(self.api_secret, query)
-        query += '&api_sig=%s' % api_sig
         # composite url
         url = USER_AUTH_URL + '?' + query
         return url

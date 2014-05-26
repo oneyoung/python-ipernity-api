@@ -43,7 +43,7 @@ def call(api_method, force_auth=False):
         def wrapper(self, *args, **kwargs):
             params, format_result = func(self, *args, **kwargs)
             # IpernityObject.__id__ handling
-            idname = self.__class__.__id__
+            idname = getattr(self.__class__, '__id__', None)
             if idname and idname not in params:
                 params[idname] = self.id
             resp = request(**params)
