@@ -55,8 +55,12 @@ class IpernityTest(TestCase):
         self.assertIsInstance(album.cover, ipernity.Doc)
         self.assertEquals(doc1.id, album.cover.id)
 
+        # add doc
+        ret = album.docs_add(doc=doc1)
+        # check result
+        self.assertEqual(ret.info['total'], 1)
+        self.assertIsInstance(ret[0]['added'], bool)
         # add docs
-        album.docs_add(doc=doc1)
         album.docs_add(docs=[doc1, doc2])
 
         # edit test

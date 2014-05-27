@@ -83,9 +83,11 @@ def _dict_str2int(d, recurse=True):
     for k, v in d.items():
         if (isinstance(v, unicode) or isinstance(v, str)) and v.isdigit():
             d[k] = int(v)
-        elif isinstance(v, dict):
-            if recurse:
+        elif recurse:
+            if isinstance(v, dict):
                 d[k] = _dict_str2int(v)
+            elif isinstance(v, list):
+                d[k] = [_dict_str2int(l) for l in v]
     return d
 
 
@@ -134,6 +136,13 @@ def _convert_iobj(kwargs, src, dst):
             raise ValueError('Invalid IpernityObject for %s' % src)
         kwargs[dst] = iobj.id
     return kwargs
+
+
+def _dict_mapping(d, mapping):
+    for k, func in mapping:
+        if k in d:
+            d[k] = func(d[k])
+    return d
 
 
 class Test(IpernityObject):
@@ -213,7 +222,11 @@ class Album(IpernityObject):
             info = resp['album']
             info.pop('album_id')
             info = _dict_str2int(info, False)
-            docs = info.pop('doc')
+            mapping = [
+                ('added', bool),
+                ('error', bool),
+            ]
+            docs = [_dict_mapping(d, mapping) for d in info.pop('doc')]
             return IpernityList(docs, info=info)
 
         try:
@@ -228,7 +241,7 @@ class Album(IpernityObject):
             raise IpernityError('No or Invalid doc provided')
         kwargs['doc_id'] = doc_id
 
-        return kwargs, _none
+        return kwargs, format_result
 
 
 class Folder(IpernityObject):
@@ -324,10 +337,7 @@ def _conv_you(you):
         ('visits', int),
         ('last_visit', _ts2datetime),
     ]
-    for name, func in mapping:
-        if name in you:
-            you[name] = func(you[name])
-    return you
+    return _dict_mapping(you, mapping)
 
 
 class File(IpernityObject):
