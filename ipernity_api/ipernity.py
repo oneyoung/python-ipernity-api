@@ -303,6 +303,9 @@ class Doc(IpernityObject):
         (['can'], _dict_conv(bool)),
         (['you'], _conv_you),
         (['owner'], lambda r: User(**r)),
+        (['thumbs'], lambda tbs: [Thumb(**tb) for tb in tbs['thumb']]),
+        (['medias'], lambda mds: [Media(**md) for md in mds['media']]),
+        (['original'], lambda o: Original(**o)),
     ]
 
     @static_call('doc.get')
