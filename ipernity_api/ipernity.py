@@ -23,6 +23,8 @@ class IpernityObject(object):
     __convertors__ = []
     # replace is a list consist of (oldname, newname, conv_func)
     __replace__ = []
+    # __display__ fields to be shown in __str__, default only show id
+    __display__ = []
     # attr name that represent object's id in ipernity.com, e,g photo_id, user_id
     # if present, will add a filed that call 'id'
     __id__ = ''
@@ -35,6 +37,14 @@ class IpernityObject(object):
 
     def __setitem__(self, key, value):
         raise IpernityError('Attr: Read-Only')
+
+    def __str__(self):
+        cls = self.__class__
+        clsname = cls.__name__
+        fields = cls.__display__ or [cls.__id__]
+        info = ' '.join(['%s:%s' % (attr, getattr(self, attr))
+                         for attr in filter(lambda a: hasattr(self, a), fields)])
+        return '%s[%s]' % (clsname, info)
 
     def _set_props(self, **params):
         # implemnet of __convertors__
@@ -121,6 +131,7 @@ class Test(IpernityObject):
 
 class User(IpernityObject):
     __id__ = 'user_id'
+    __display__ = ['id', 'username']
     __convertors__ = [
         (['is_pro', 'is_online', 'is_closed'], bool),
         (['count'], _dict_conv(int)),
@@ -152,6 +163,7 @@ class Auth(IpernityObject):
 
 class Album(IpernityObject):
     __id__ = 'album_id'
+    __display__ = ['id', 'title']
     __convertors__ = [
         (['count'], _dict_conv(int)),
         (['dates'], _dict_conv(_ts2datetime)),
@@ -179,6 +191,7 @@ class Album(IpernityObject):
 
 class Folder(IpernityObject):
     __id__ = 'folder_id'
+    __display__ = ['id', 'title']
     __convertors__ = [
         (['count'], _dict_conv(int)),
         (['dates'], _dict_conv(_ts2datetime)),
@@ -276,27 +289,27 @@ def _conv_you(you):
 
 
 class File(IpernityObject):
+    __display__ = ['label', 'url']
     __convertors__ = [
         (['w', 'h', 'lehgth', 'bytes'], int),
     ]
-    # media type, could be thumb/media/original
-    type = ''
 
 
 class Thumb(File):
-    type = 'thumb'
+    pass
 
 
 class Media(File):
-    type = 'media'
+    pass
 
 
 class Original(File):
-    type = 'original'
+    pass
 
 
 class Doc(IpernityObject):
     __id__ = 'doc_id'
+    __display__ = ['id', 'title']
     __convertors__ = [
         (['dates'], _dict_conv(_ts2datetime)),
         (['count', 'visibility', 'permissions'], _dict_conv(int)),

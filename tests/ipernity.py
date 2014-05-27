@@ -87,6 +87,12 @@ class IpernityTest(TestCase):
         self.assertIsInstance(doc.can['fave'], bool)
         self.assertIsInstance(doc.you['visits'], int)
         self.assertIsInstance(doc.owner, ipernity.User)
+        doc_str = str(doc)
+        self.assertIn('Doc', doc_str)
+        self.assertIn('id', doc_str)
+        self.assertIn('title', doc_str)
+
+        # thumb test
         thumb = doc.thumbs[0]
         self.assertIsInstance(thumb, ipernity.Thumb)
         self.assertIsInstance(thumb.w, int)
