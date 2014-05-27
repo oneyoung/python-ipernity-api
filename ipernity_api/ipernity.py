@@ -275,6 +275,26 @@ def _conv_you(you):
     return you
 
 
+class File(IpernityObject):
+    __convertors__ = [
+        (['w', 'h', 'lehgth', 'bytes'], int),
+    ]
+    # media type, could be thumb/media/original
+    type = ''
+
+
+class Thumb(File):
+    type = 'thumb'
+
+
+class Media(File):
+    type = 'media'
+
+
+class Original(File):
+    type = 'original'
+
+
 class Doc(IpernityObject):
     __id__ = 'doc_id'
     __convertors__ = [
