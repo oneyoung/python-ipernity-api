@@ -13,7 +13,13 @@ class IpernityTest(TestCase):
     def __init__(self, *arg, **kwargs):
         TestCase.__init__(self, *arg, **kwargs)
         utils.auto_auth()
+        # get a default user
         self.user = utils.AUTH_HANDLER.getUser()
+        # fetch some docs for later test
+        docs = ipernity.Doc.getList(user=self.user).data
+        if not len(docs):  # not docs found, we upload some
+            docs = self.upload_files()
+        self.docs = docs
 
     def test_Test(self):
         self.assertEquals('echo', ipernity.Test.echo(echo='echo'))

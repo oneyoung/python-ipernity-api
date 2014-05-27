@@ -119,6 +119,22 @@ def _replaceid(kwargs, idname):
     return kwargs
 
 
+def _convert_iobj(kwargs, src, dst):
+    ''' replace IpernityObject parameter with id
+
+    params:
+        kwargs: parameters dict to be handle
+        src: var name to be convert
+        dst: assign to new var name
+    '''
+    if dst not in kwargs and src in kwargs:
+        iobj = kwargs.pop(src)
+        if not isinstance(iobj, IpernityObject) or not hasattr(iobj, 'id'):
+            raise ValueError('Invalid IpernityObject for %s' % src)
+        kwargs[dst] = iobj.id
+    return kwargs
+
+
 class Test(IpernityObject):
     @static_call('test.echo')
     def echo(**kwargs):
@@ -168,9 +184,13 @@ class Album(IpernityObject):
         (['count'], _dict_conv(int)),
         (['dates'], _dict_conv(_ts2datetime)),
     ]
+    __replace__ = [
+        ('cover_id', 'cover', lambda c: Doc(**c)),
+    ]
 
     @static_call('album.create')
     def create(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'cover', 'cover_id')
         return kwargs, lambda r: Album(**r['album'])
 
     @static_call('album.get', force_auth=True)
@@ -184,7 +204,7 @@ class Album(IpernityObject):
 
     @call('album.edit')
     def edit(self, **kwargs):
-        # TODO: add cover_id here, update from doc objects
+        kwargs = _convert_iobj(kwargs, 'cover', 'cover_id')
         # result should update to self
         return kwargs, lambda r: self._set_props(**r['album'])
 
@@ -311,6 +331,7 @@ class Doc(IpernityObject):
     __id__ = 'doc_id'
     __display__ = ['id', 'title']
     __convertors__ = [
+        (['w', 'h', 'lehgth', 'bytes'], int),
         (['dates'], _dict_conv(_ts2datetime)),
         (['count', 'visibility', 'permissions'], _dict_conv(int)),
         (['can'], _dict_conv(bool)),
@@ -320,6 +341,21 @@ class Doc(IpernityObject):
         (['medias'], lambda mds: [Media(**md) for md in mds['media']]),
         (['original'], lambda o: Original(**o)),
     ]
+
+    @static_call('doc.getList')
+    def getList(**kwargs):
+        def format_result(resp):
+            info = resp['docs']
+            info = _dict_str2int(info)
+            if info['count'] > 0:
+                docs_json = info.pop('doc')
+                docs = [Doc(**d) for d in docs_json]
+            else:
+                docs = []
+            return IpernityList(docs, info=info)
+
+        kwargs = _convert_iobj(kwargs, 'user', 'user_id')
+        return kwargs, format_result
 
     @static_call('doc.get')
     def get(**kwargs):
