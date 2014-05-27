@@ -13,13 +13,14 @@ class IpernityTest(TestCase):
     def __init__(self, *arg, **kwargs):
         TestCase.__init__(self, *arg, **kwargs)
         utils.auto_auth()
+        self.user = utils.AUTH_HANDLER.getUser()
 
     def test_Test(self):
         self.assertEquals('echo', ipernity.Test.echo(echo='echo'))
         self.assertIn('hello', ipernity.Test.hello())
 
     def test_User(self):
-        user_id = 787135
+        user_id = self.user.id
         # get user test
         user = ipernity.User.get(id=user_id)
         self.assertIsInstance(user, ipernity.User)
@@ -99,3 +100,12 @@ class IpernityTest(TestCase):
         self.assertIsInstance(thumb.h, int)
 
         doc.delete()
+
+    def upload_files(self):
+        ''' upload some test image and return '''
+        def upload_img(fname):
+            ticket = ipernity.Upload.file(file=getfile(fname))
+            return ticket.getDoc()
+
+        files = ['1.jpg', '2.jpg']
+        return [upload_img(fname) for fname in files]
