@@ -78,13 +78,14 @@ def _none(resp):
     pass
 
 
-def _dict_str2int(d):
+def _dict_str2int(d, recurse=True):
     ''' convert string to int, traverse dict '''
     for k, v in d.items():
         if (isinstance(v, unicode) or isinstance(v, str)) and v.isdigit():
             d[k] = int(v)
         elif isinstance(v, dict):
-            d[k] = _dict_str2int(v)
+            if recurse:
+                d[k] = _dict_str2int(v)
     return d
 
 
@@ -183,9 +184,7 @@ class Album(IpernityObject):
     __convertors__ = [
         (['count'], _dict_conv(int)),
         (['dates'], _dict_conv(_ts2datetime)),
-    ]
-    __replace__ = [
-        ('cover_id', 'cover', lambda c: Doc(**c)),
+        (['cover'], lambda c: Doc(**c)),
     ]
 
     @static_call('album.create')
@@ -207,6 +206,29 @@ class Album(IpernityObject):
         kwargs = _convert_iobj(kwargs, 'cover', 'cover_id')
         # result should update to self
         return kwargs, lambda r: self._set_props(**r['album'])
+
+    @call('album.docs.add')
+    def docs_add(self, **kwargs):
+        def format_result(resp):
+            info = resp['album']
+            info.pop('album_id')
+            info = _dict_str2int(info, False)
+            docs = info.pop('doc')
+            return IpernityList(docs, info=info)
+
+        try:
+            if 'doc' in kwargs:
+                doc_id = kwargs.pop('doc').id
+            elif 'docs' in kwargs:
+                doc_id = ','.join([doc.id if isinstance(doc, Doc) else doc
+                                  for doc in kwargs.pop('docs')])
+            else:
+                doc_id = kwargs.pop('doc_id')
+        except:
+            raise IpernityError('No or Invalid doc provided')
+        kwargs['doc_id'] = doc_id
+
+        return kwargs, _none
 
 
 class Folder(IpernityObject):
@@ -346,7 +368,7 @@ class Doc(IpernityObject):
     def getList(**kwargs):
         def format_result(resp):
             info = resp['docs']
-            info = _dict_str2int(info)
+            info = _dict_str2int(info, False)
             if info['count'] > 0:
                 docs_json = info.pop('doc')
                 docs = [Doc(**d) for d in docs_json]

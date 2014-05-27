@@ -17,8 +17,9 @@ class IpernityTest(TestCase):
         self.user = utils.AUTH_HANDLER.getUser()
         # fetch some docs for later test
         docs = ipernity.Doc.getList(user=self.user).data
-        if not len(docs):  # not docs found, we upload some
-            docs = self.upload_files()
+        if len(docs) < 2:  # not enough docs, we upload some
+            self.upload_files()
+            docs = ipernity.Doc.getList(user=self.user).data
         self.docs = docs
 
     def test_Test(self):
@@ -45,17 +46,28 @@ class IpernityTest(TestCase):
         self.assertIsInstance(left, int)
 
     def test_Album(self):
-        album = ipernity.Album.create(title='This is a album')
+        doc1 = self.docs[0]
+        doc2 = self.docs[1]
+        album = ipernity.Album.create(title='This is a album', cover=doc1)
         # fields validation
         self.assertIsInstance(album.count['docs'], int)
         self.assertIsInstance(album.dates['created_at'], datetime.datetime)
+        self.assertIsInstance(album.cover, ipernity.Doc)
+        self.assertEquals(doc1.id, album.cover.id)
+
+        # add docs
+        album.docs_add(doc=doc1)
+        album.docs_add(docs=[doc1, doc2])
 
         # edit test
         new_title = 'New title'
         new_desc = 'This is a new description'
-        album.edit(title=new_title, description=new_desc)
+        # Note: new cover should belong to the same album
+        # otherwise, ipernity.com would complain "doc not found'
+        album.edit(title=new_title, description=new_desc, cover=doc2)
         self.assertEquals(album.title, new_title)
         self.assertEquals(album.description, new_desc)
+        self.assertEquals(doc2.id, album.cover.id)
 
         album_id = album.id
         # new album can be get
@@ -109,6 +121,7 @@ class IpernityTest(TestCase):
 
     def upload_files(self):
         ''' upload some test image and return '''
+        # should upload at least 2 files
         def upload_img(fname):
             ticket = ipernity.Upload.file(file=getfile(fname))
             return ticket.getDoc()
