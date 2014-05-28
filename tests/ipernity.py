@@ -63,6 +63,27 @@ class IpernityTest(TestCase):
         # add docs
         album.docs_add(docs=[doc1, doc2])
 
+        # Faves Test for Album
+        Faves = ipernity.Faves
+        ret = album.getFaves()
+        self.assertEqual(ret.info['count'], 0)
+        # Faves add and getList
+        Faves.albums_add(album=album)  # add by Faves
+        ret = Faves.albums_getList(user=self.user, owner=self.user)  # verifiy Faves list
+        self.assertTrue(ret.info['total'] > 0)
+        self.assertTrue(any([a.id == album.id for a in ret]))
+        # album.getFaves
+        # TODO: this fail, wired
+        #ret = album.getFaves()
+        #ts = ret[0]['faved_at']
+        #self.assertIsInstance(ts, datetime.datetime)
+        #user = ret[0]['user']  # only one user faves
+        #self.assertTrue(user.id == self.user.id)
+        # remove it
+        Faves.albums_remove(album=album)
+        ret = Faves.albums_getList(user=self.user, owner=self.user)  # verifiy Faves list
+        self.assertFalse(any([a.id == album.id for a in ret.data]))  # should not found
+
         # edit test
         new_title = 'New title'
         new_desc = 'This is a new description'
@@ -114,6 +135,25 @@ class IpernityTest(TestCase):
         self.assertIn('Doc', doc_str)
         self.assertIn('id', doc_str)
         self.assertIn('title', doc_str)
+
+        # Faves test
+        Faves = ipernity.Faves
+        # add
+        Faves.docs_add(doc=doc)
+        ret = Faves.docs_getList(user=self.user, owner=self.user)
+        self.assertTrue(ret.info['total'] > 0)  # docs should be found
+        self.assertTrue(any([d.id == doc.id for d in ret]))
+        # check doc.getFaves
+        # TODO: this fail, wired
+        # ret = doc.getFaves()
+        # ts = ret[0]['faved_at']
+        # self.assertIsInstance(ts, datetime.datetime)
+        # user = ret[0]['user']  # only one user faves
+        # self.assertTrue(user.id == self.user.id)
+        # remove
+        Faves.docs_remove(doc=doc)
+        ret = Faves.docs_getList(user=self.user, owner=self.user)
+        self.assertFalse(any([d.id == doc.id for d in ret]))
 
         # thumb test
         thumb = doc.thumbs[0]

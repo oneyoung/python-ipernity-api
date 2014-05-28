@@ -38,7 +38,7 @@ class IpernityObject(object):
     def __setitem__(self, key, value):
         raise IpernityError('Attr: Read-Only')
 
-    def __str__(self):
+    def __repr__(self):
         cls = self.__class__
         clsname = cls.__name__
         fields = cls.__display__ or [cls.__id__]
@@ -146,6 +146,16 @@ def _dict_mapping(d, mapping):
     return d
 
 
+def _format_result_faves(resp):
+    info = resp['faves']
+    faves = [{
+        'user': User(id=f.get('user_id'), username=f.get('username', '')),
+        'faved_at': _ts2datetime(f.get('faved_at', 0)),
+    } for f in info.pop('fave', [])]
+    info = _dict_str2int(info)
+    return IpernityList(faves, info)
+
+
 class Test(IpernityObject):
     @static_call('test.echo')
     def echo(**kwargs):
@@ -216,6 +226,10 @@ class Album(IpernityObject):
         kwargs = _convert_iobj(kwargs, 'cover')
         # result should update to self
         return kwargs, lambda r: self._set_props(**r['album'])
+
+    @call('album.getFaves')
+    def getFaves(self, **kwargs):
+        return kwargs, _format_result_faves
 
     @call('album.docs.add')
     def docs_add(self, **kwargs):
@@ -390,6 +404,11 @@ class Doc(IpernityObject):
     def get(**kwargs):
         kwargs = _replaceid(kwargs, Doc.__id__)
         return kwargs, lambda r: Doc(**r['doc'])
+
+    @call('doc.getFaves')
+    def getFaves(self, **kwargs):
+        kwargs = _convert_iobj(kwargs, 'doc')
+        return kwargs, _format_result_faves
 
     @call('doc.delete')
     def delete(self, **kwargs):
