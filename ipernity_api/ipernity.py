@@ -476,3 +476,29 @@ class Faves(IpernityObject):
         kwargs = _convert_iobj(kwargs, 'user')
         kwargs = _convert_iobj(kwargs, 'owner')
         return kwargs, format_result
+
+
+class Tag(IpernityObject):
+    __display__ = ['id', 'tag']
+
+    @staticmethod
+    def _format_result_tags(resp):
+        info = resp['tags']
+        info['count'] = int(info['count'])
+        tags = [Tag(**t) for t in info.pop('tag', [])]
+        return IpernityList(tags, info)
+
+    @static_call('tags.user.getList')
+    def user_getList(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'user')
+        return kwargs, Tag._format_result_tags
+
+    @static_call('tags.user.getPopular')
+    def user_getPopular(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'user')
+        return kwargs, Tag._format_result_tags
+
+    @call('tags.docs.getList')
+    def docs_getList(self, **kwargs):
+        # TODO: need format result
+        return kwargs, _none
