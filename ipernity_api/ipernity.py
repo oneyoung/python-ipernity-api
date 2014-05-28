@@ -146,14 +146,38 @@ def _dict_mapping(d, mapping):
     return d
 
 
-def _format_result_faves(resp):
-    info = resp['faves']
-    faves = [{
-        'user': User(id=f.get('user_id'), username=f.get('username', '')),
-        'faved_at': _ts2datetime(f.get('faved_at', 0)),
-    } for f in info.pop('fave', [])]
-    info = _dict_str2int(info)
-    return IpernityList(faves, info)
+def _dict_mapping_func(mapping):
+    def func(d):
+        return _dict_mapping(d, mapping)
+    return func
+
+
+### format result functions
+def _resp2ilist(key, func_info, func_list):
+    ''' function generator for converting response to IpernityList
+
+    parameters:
+        name: the key of dict which point to the list
+        func_info: func to convert info part
+        func_list: func to convert list elem
+    '''
+    def convertor(resp):
+        sec_name = key + 's'  # section name
+        info = resp[sec_name]
+        data = [func_list(e) for e in info.pop(key, [])]
+        info = func_info(info)
+        return IpernityList(data, info)
+    return convertor
+
+
+_format_result_docs = _resp2ilist('doc', _dict_str2int, lambda d: Doc(**d))
+_format_result_albums = _resp2ilist('album', _dict_str2int, lambda d: Album(**d))
+_format_result_faves = _resp2ilist('fave', _dict_str2int, lambda f: {
+    'user': User(id=f.get('user_id'), username=f.get('username', '')),
+    'faved_at': _ts2datetime(f.get('faved_at', 0)),
+})
+_format_result_tags = _resp2ilist('tag', _dict_mapping_func(('count', int)),
+                                  lambda t: Tag(**t))
 
 
 class Test(IpernityObject):
@@ -225,14 +249,8 @@ class Album(IpernityObject):
 
     @static_call('album.getList', True)
     def getList(**kwargs):
-        def format_result(resp):
-            info = resp['albums']
-            albums = [Album(**a) for a in info.pop('album', [])]
-            info = _dict_str2int(info)
-            return IpernityList(albums, info)
-
         kwargs = _convert_iobj(kwargs, 'user')
-        return kwargs, format_result
+        return kwargs, _resp2ilist('album', _dict_str2int, lambda d: Album(**d))
 
     @call('album.delete')
     def delete(self, **kwargs):
@@ -305,17 +323,12 @@ class Upload(IpernityObject):
 
     @static_call('upload.checkTickets')
     def checkTickets(**kwargs):
-        def format_result(resp):
-            info = resp['tickets']
-            tickets = info.pop('ticket', [])
-            return IpernityList([Ticket(**t) for t in tickets], info=info)
-
         if 'tickets' not in kwargs:
             raise IpernityError('No tickets provided')
         tickets = kwargs.pop('tickets')
         kwargs['tickets'] = ','.join([t.id if isinstance(t, Ticket) else t
                                       for t in tickets])
-        return kwargs, format_result
+        return kwargs, _resp2ilist('ticket', _dict_str2int, lambda d: Ticket(**d))
 
 
 class Ticket(IpernityObject):
@@ -408,14 +421,8 @@ class Doc(IpernityObject):
 
     @static_call('doc.getList')
     def getList(**kwargs):
-        def format_result(resp):
-            info = resp['docs']
-            docs = [Doc(**d) for d in info.pop('doc', [])]
-            info = _dict_str2int(info, False)
-            return IpernityList(docs, info=info)
-
         kwargs = _convert_iobj(kwargs, 'user', 'user_id')
-        return kwargs, format_result
+        return kwargs, _format_result_docs
 
     @static_call('doc.get')
     def get(**kwargs):
@@ -445,15 +452,9 @@ class Faves(IpernityObject):
 
     @static_call('faves.albums.getList')
     def albums_getList(**kwargs):
-        def format_result(resp):
-            info = resp['albums']
-            albums = [Album(**a) for a in info.pop('album', [])]
-            info = _dict_str2int(info)
-            return IpernityList(albums, info)
-
         kwargs = _convert_iobj(kwargs, 'user')
         kwargs = _convert_iobj(kwargs, 'owner')
-        return kwargs, format_result
+        return kwargs, _format_result_albums
 
     @static_call('faves.docs.add')
     def docs_add(**kwargs):
@@ -467,38 +468,24 @@ class Faves(IpernityObject):
 
     @static_call('faves.docs.getList')
     def docs_getList(**kwargs):
-        def format_result(resp):
-            info = resp['docs']
-            docs = [Doc(**a) for a in info.pop('doc', [])]
-            info = _dict_str2int(info)
-            return IpernityList(docs, info)
-
         kwargs = _convert_iobj(kwargs, 'user')
         kwargs = _convert_iobj(kwargs, 'owner')
-        return kwargs, format_result
+        return kwargs, _format_result_docs
 
 
 class Tag(IpernityObject):
     __display__ = ['id', 'tag']
 
-    @staticmethod
-    def _format_result_tags(resp):
-        info = resp['tags']
-        info['count'] = int(info['count'])
-        tags = [Tag(**t) for t in info.pop('tag', [])]
-        return IpernityList(tags, info)
-
     @static_call('tags.user.getList')
     def user_getList(**kwargs):
         kwargs = _convert_iobj(kwargs, 'user')
-        return kwargs, Tag._format_result_tags
+        return kwargs, _format_result_tags
 
     @static_call('tags.user.getPopular')
     def user_getPopular(**kwargs):
         kwargs = _convert_iobj(kwargs, 'user')
-        return kwargs, Tag._format_result_tags
+        return kwargs, _format_result_tags
 
     @call('tags.docs.getList')
     def docs_getList(self, **kwargs):
-        # TODO: need format result
-        return kwargs, _none
+        return kwargs, _format_result_docs
