@@ -213,7 +213,7 @@ class Album(IpernityObject):
 
     @call('album.edit')
     def edit(self, **kwargs):
-        kwargs = _convert_iobj(kwargs, 'cover', 'cover_id')
+        kwargs = _convert_iobj(kwargs, 'cover')
         # result should update to self
         return kwargs, lambda r: self._set_props(**r['album'])
 
@@ -221,13 +221,13 @@ class Album(IpernityObject):
     def docs_add(self, **kwargs):
         def format_result(resp):
             info = resp['album']
-            info.pop('album_id')
+            info.pop('album_id', None)
             info = _dict_str2int(info, False)
             mapping = [
                 ('added', bool),
                 ('error', bool),
             ]
-            docs = [_dict_mapping(d, mapping) for d in info.pop('doc')]
+            docs = [_dict_mapping(d, mapping) for d in info.pop('doc', [])]
             return IpernityList(docs, info=info)
 
         try:
@@ -276,7 +276,7 @@ class Upload(IpernityObject):
     def checkTickets(**kwargs):
         def format_result(resp):
             info = resp['tickets']
-            tickets = info.pop('ticket')
+            tickets = info.pop('ticket', [])
             return IpernityList([Ticket(**t) for t in tickets], info=info)
 
         if 'tickets' not in kwargs:
@@ -379,12 +379,8 @@ class Doc(IpernityObject):
     def getList(**kwargs):
         def format_result(resp):
             info = resp['docs']
+            docs = [Doc(**d) for d in info.pop('doc', [])]
             info = _dict_str2int(info, False)
-            if info['count'] > 0:
-                docs_json = info.pop('doc')
-                docs = [Doc(**d) for d in docs_json]
-            else:
-                docs = []
             return IpernityList(docs, info=info)
 
         kwargs = _convert_iobj(kwargs, 'user', 'user_id')
@@ -415,7 +411,7 @@ class Faves(IpernityObject):
     def albums_getList(**kwargs):
         def format_result(resp):
             info = resp['albums']
-            albums = [Album(**a) for a in info.pop('album')]
+            albums = [Album(**a) for a in info.pop('album', [])]
             info = _dict_str2int(info)
             return IpernityList(albums, info)
 
@@ -437,7 +433,7 @@ class Faves(IpernityObject):
     def docs_getList(**kwargs):
         def format_result(resp):
             info = resp['docs']
-            docs = [Doc(**a) for a in info.pop('doc')]
+            docs = [Doc(**a) for a in info.pop('doc', [])]
             info = _dict_str2int(info)
             return IpernityList(docs, info)
 
