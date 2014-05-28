@@ -122,7 +122,7 @@ def _replaceid(kwargs, idname):
     return kwargs
 
 
-def _convert_iobj(kwargs, src, dst):
+def _convert_iobj(kwargs, src, dst=None):
     ''' replace IpernityObject parameter with id
 
     params:
@@ -130,6 +130,7 @@ def _convert_iobj(kwargs, src, dst):
         src: var name to be convert
         dst: assign to new var name
     '''
+    dst = dst or src + '_id'
     if dst not in kwargs and src in kwargs:
         iobj = kwargs.pop(src)
         if not isinstance(iobj, IpernityObject) or not hasattr(iobj, 'id'):
@@ -198,7 +199,7 @@ class Album(IpernityObject):
 
     @static_call('album.create')
     def create(**kwargs):
-        kwargs = _convert_iobj(kwargs, 'cover', 'cover_id')
+        kwargs = _convert_iobj(kwargs, 'cover')
         return kwargs, lambda r: Album(**r['album'])
 
     @static_call('album.get', force_auth=True)
@@ -397,3 +398,49 @@ class Doc(IpernityObject):
     @call('doc.delete')
     def delete(self, **kwargs):
         return kwargs, _none
+
+
+class Faves(IpernityObject):
+    @static_call('faves.albums.add')
+    def albums_add(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'album')
+        return kwargs, _none
+
+    @static_call('faves.albums.remove')
+    def albums_remove(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'album')
+        return kwargs, _none
+
+    @static_call('faves.albums.getList')
+    def albums_getList(**kwargs):
+        def format_result(resp):
+            info = resp['albums']
+            albums = [Album(**a) for a in info.pop('album')]
+            info = _dict_str2int(info)
+            return IpernityList(albums, info)
+
+        kwargs = _convert_iobj(kwargs, 'user')
+        kwargs = _convert_iobj(kwargs, 'owner')
+        return kwargs, format_result
+
+    @static_call('faves.docs.add')
+    def docs_add(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'doc')
+        return kwargs, _none
+
+    @static_call('faves.docs.remove')
+    def docs_remove(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'doc')
+        return kwargs, _none
+
+    @static_call('faves.docs.getList')
+    def docs_getList(**kwargs):
+        def format_result(resp):
+            info = resp['docs']
+            docs = [Doc(**a) for a in info.pop('doc')]
+            info = _dict_str2int(info)
+            return IpernityList(docs, info)
+
+        kwargs = _convert_iobj(kwargs, 'user')
+        kwargs = _convert_iobj(kwargs, 'owner')
+        return kwargs, format_result
