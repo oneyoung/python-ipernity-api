@@ -184,6 +184,12 @@ class User(IpernityObject):
     def getQuota(**kwargs):
         return kwargs, lambda r: Quota(**r['quota'])
 
+    def getDocs(self):
+        return Doc.getList(user=self)
+
+    def getAlbums(self):
+        return Album.getList(user=self)
+
 
 class Quota(IpernityObject):
     __convertors__ = [
@@ -216,6 +222,17 @@ class Album(IpernityObject):
     def get(**kwargs):
         kwargs = _replaceid(kwargs, Album.__id__)
         return kwargs, lambda r: Album(**r['album'])
+
+    @static_call('album.getList', True)
+    def getList(**kwargs):
+        def format_result(resp):
+            info = resp['albums']
+            albums = [Album(**a) for a in info.pop('album', [])]
+            info = _dict_str2int(info)
+            return IpernityList(albums, info)
+
+        kwargs = _convert_iobj(kwargs, 'user')
+        return kwargs, format_result
 
     @call('album.delete')
     def delete(self, **kwargs):

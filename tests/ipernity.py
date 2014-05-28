@@ -16,10 +16,10 @@ class IpernityTest(TestCase):
         # get a default user
         self.user = utils.AUTH_HANDLER.getUser()
         # fetch some docs for later test
-        docs = ipernity.Doc.getList(user=self.user).data
+        docs = self.user.getDocs()
         if len(docs) < 2:  # not enough docs, we upload some
             self.upload_files()
-            docs = ipernity.Doc.getList(user=self.user).data
+            docs = self.user.getDocs()
         self.docs = docs
 
     def test_Test(self):
@@ -45,6 +45,10 @@ class IpernityTest(TestCase):
         left = quota.upload['used']['mb']
         self.assertIsInstance(left, int)
 
+        # getXXX test
+        user.getDocs()
+        user.getAlbums()
+
     def test_Album(self):
         doc1 = self.docs[0]
         doc2 = self.docs[1]
@@ -54,6 +58,11 @@ class IpernityTest(TestCase):
         self.assertIsInstance(album.dates['created_at'], datetime.datetime)
         self.assertIsInstance(album.cover, ipernity.Doc)
         self.assertEquals(doc1.id, album.cover.id)
+
+        # getList test
+        ret = ipernity.Album.getList(user=self.user)
+        self.assertTrue(ret.info['total'] > 0)
+        self.assertTrue(any([a.id == album.id for a in ret]))
 
         # add doc
         ret = album.docs_add(doc=doc1)
