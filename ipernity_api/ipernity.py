@@ -152,6 +152,15 @@ def _dict_mapping_func(mapping):
     return func
 
 
+def _dict_list2str(kwargs, keys):
+    for key in keys:
+        if key in kwargs:
+            val = kwargs[key]
+            if isinstance(val, list):
+                kwargs[key] = ','.join(val)
+    return kwargs
+
+
 ### format result functions
 def _resp2ilist(key, func_info, func_list):
     ''' function generator for converting response to IpernityList
@@ -176,7 +185,10 @@ _format_result_faves = _resp2ilist('fave', _dict_str2int, lambda f: {
     'user': User(id=f.get('user_id'), username=f.get('username', '')),
     'faved_at': _ts2datetime(f.get('faved_at', 0)),
 })
-_format_result_tags = _resp2ilist('tag', _dict_mapping_func(('count', int)),
+_format_result_tags = _resp2ilist('tag', _dict_mapping_func([('count', int),
+                                                             ('total', int),
+                                                             ('added', int),
+                                                             ('dropped', int)]),
                                   lambda t: Tag(**t))
 
 
@@ -213,6 +225,12 @@ class User(IpernityObject):
 
     def getAlbums(self):
         return Album.getList(user=self)
+
+    def getTags(self):
+        return Tag.user_getList(user=self)
+
+    def getPopularTags(self):
+        return Tag.user_getPopular(user=self)
 
 
 class Quota(IpernityObject):
@@ -438,6 +456,35 @@ class Doc(IpernityObject):
     def delete(self, **kwargs):
         return kwargs, _none
 
+    # tags handling
+    @call('doc.tags.add')
+    def tags_add(self, **kwargs):
+        kwargs = _dict_list2str(kwargs, ['keywords', 'members'])
+        return kwargs, _format_result_tags
+
+    @call('doc.tags.edit')
+    def tags_edit(self, **kwargs):
+        kwargs = _dict_list2str(kwargs, ['keywords', 'members'])
+        return kwargs, _format_result_tags
+
+    @call('doc.tags.getList')
+    def tags_getList(self, **kwargs):
+        return kwargs, _format_result_tags
+
+    @call('doc.tags.remove')
+    def tags_remove(self, **kwargs):
+        if 'tag' in kwargs:
+            tag = kwargs.pop('tag')
+            if not isinstance(tag, Tag):
+                raise IpernityError('Invalid tag')
+            kwargs['id'] = tag.id
+        # parameter sanity check
+        if 'type' not in kwargs or kwargs['type'] not in ['keyword', 'member']:
+            raise IpernityError('No "type" provide or invalid value')
+        if not kwargs.get('id', None):
+            raise IpernityError('No "tag" or "id" provide')
+        return kwargs, _none
+
 
 class Faves(IpernityObject):
     @static_call('faves.albums.add')
@@ -475,6 +522,12 @@ class Faves(IpernityObject):
 
 class Tag(IpernityObject):
     __display__ = ['id', 'tag']
+    __convertors__ = [
+        (['added_at'], _ts2datetime),
+    ]
+    __replace__ = [
+        ('user_id', 'user', lambda uid: User(id=uid)),
+    ]
 
     @static_call('tags.user.getList')
     def user_getList(**kwargs):
@@ -488,4 +541,8 @@ class Tag(IpernityObject):
 
     @call('tags.docs.getList')
     def docs_getList(self, **kwargs):
+        if 'type' not in kwargs:
+            raise IpernityError('param: "type" is required')
+        kwargs = _convert_iobj(kwargs, 'user')
+        kwargs['id'] = self.id
         return kwargs, _format_result_docs

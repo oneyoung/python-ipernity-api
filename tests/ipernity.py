@@ -172,6 +172,46 @@ class IpernityTest(TestCase):
 
         doc.delete()
 
+    def test_Tag(self):
+        doc = self.docs[0]
+        # add
+        kwords = ['tag1', 'tag2']
+        ret = doc.tags_add(keywords=kwords)
+        self.assertIsInstance(ret.info['added'], int)
+
+        # edit
+        new_kwords = ['tag3', 'tag4']
+        ret = doc.tags_edit(keywords=new_kwords)
+
+        # getList
+        ret = doc.tags_getList()
+        self.assertIsInstance(ret.info['total'], int)
+        export_tags = [t.tag for t in ret]
+        self.assertTrue(all([t in export_tags for t in new_kwords]))
+        tag = ret[0]
+        tags = ret.data
+        # tag obj verify
+        self.assertIsInstance(tag.user, ipernity.User)
+        self.assertIsInstance(tag.added_at, datetime.datetime)
+
+        # test user.getTags
+        ret = self.user.getTags()
+        self.assertTrue(ret.info['count'] > 0)
+        self.assertIsInstance(ret[0], ipernity.Tag)
+        self.user.getPopularTags()
+        # test Tag
+        with self.assertRaisesRegexp(errors.IpernityError, 'type'):
+            tag.docs_getList()
+        ret = tag.docs_getList(user=self.user, type='keyword')
+        self.assertTrue(any([d.id == doc.id for d in ret]))
+
+        # remove
+        with self.assertRaisesRegexp(errors.IpernityError, 'type'):
+            # type parameter is required
+            doc.tags_remove(tag=tag)
+        for t in tags:
+            doc.tags_remove(tag=t, type='keyword')
+
     def upload_files(self):
         ''' upload some test image and return '''
         # should upload at least 2 files
