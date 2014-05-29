@@ -4,6 +4,18 @@ from .errors import IpernityError
 from .rest import call_api
 
 
+def _required_params(info):
+    params = info.get('parameters', [])
+    requires = [p['name'] for p in
+                filter(lambda p: bool(p.get('required', 0)), params)]
+    # api_key would be handled in rest
+    try:
+        requires.remove('api_key')
+    except ValueError:
+        pass
+    return requires
+
+
 def call(api_method, force_auth=False):
     # TODO: albums.get raise Album not found, might be due to has no priviledge.
     # so need some handling to force_auth
@@ -32,6 +44,7 @@ def call(api_method, force_auth=False):
             info = __methods__[api_method]
         except KeyError:
             raise IpernityError('Method %s not found' % api_method)
+        requires = _required_params(info)
         auth_info = info['authentication']
         # partial object for this api call
         request = partial(call_api, api_method,
@@ -46,6 +59,9 @@ def call(api_method, force_auth=False):
             idname = getattr(self.__class__, '__id__', None)
             if idname and idname not in params:
                 params[idname] = self.id
+            # required parameters checking
+            if not all([p in params for p in requires]):
+                raise IpernityError('parameters missing, required: %s' % ','.join(requires))
             resp = request(**params)
             return format_result(resp)
         return wrapper
@@ -71,6 +87,7 @@ def static_call(api_method, force_auth=False):
             info = __methods__[api_method]
         except KeyError:
             raise IpernityError('Method %s not found' % api_method)
+        requires = _required_params(info)
         auth_info = info['authentication']
         # partial object for this api call
         request = partial(call_api, api_method,
@@ -81,6 +98,9 @@ def static_call(api_method, force_auth=False):
         @wraps(func)
         def wrapper(*args, **kwargs):
             params, format_result = func(*args, **kwargs)
+            # required parameters checking
+            if not all([p in params for p in requires]):
+                raise IpernityError('parameters missing, required: %s' % ','.join(requires))
             resp = request(**params)
             return format_result(resp)
         return StaticCaller(wrapper)

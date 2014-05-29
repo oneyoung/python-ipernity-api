@@ -226,11 +226,11 @@ class User(IpernityObject):
     def getAlbums(self):
         return Album.getList(user=self)
 
-    def getTags(self):
-        return Tag.user_getList(user=self)
+    def getTags(self, type='keyword'):
+        return Tag.user_getList(user=self, type=type)
 
-    def getPopularTags(self):
-        return Tag.user_getPopular(user=self)
+    def getPopularTags(self, type='keyword'):
+        return Tag.user_getPopular(user=self, type=type)
 
 
 class Quota(IpernityObject):
@@ -484,11 +484,6 @@ class Doc(IpernityObject):
             if not isinstance(tag, Tag):
                 raise IpernityError('Invalid tag')
             kwargs['id'] = tag.id
-        # parameter sanity check
-        if 'type' not in kwargs or kwargs['type'] not in ['keyword', 'member']:
-            raise IpernityError('No "type" provide or invalid value')
-        if not kwargs.get('id', None):
-            raise IpernityError('No "tag" or "id" provide')
         return kwargs, _none
 
 
@@ -548,8 +543,6 @@ class Tag(IpernityObject):
 
     @call('tags.docs.getList')
     def docs_getList(self, **kwargs):
-        if 'type' not in kwargs:
-            raise IpernityError('param: "type is required')
         kwargs = _convert_iobj(kwargs, 'user')
         return kwargs, _format_result_docs
 

@@ -200,15 +200,10 @@ class IpernityTest(TestCase):
         self.assertIsInstance(ret[0], ipernity.Tag)
         self.user.getPopularTags()
         # test Tag
-        with self.assertRaisesRegexp(errors.IpernityError, 'type'):
-            tag.docs_getList()
         ret = tag.docs_getList(user=self.user, type='keyword')
         self.assertTrue(any([d.id == doc.id for d in ret]))
 
         # remove
-        with self.assertRaisesRegexp(errors.IpernityError, 'type'):
-            # type parameter is required
-            doc.tags_remove(tag=tag)
         for t in tags:
             doc.tags_remove(tag=t, type='keyword')
 
