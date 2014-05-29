@@ -456,6 +456,12 @@ class Doc(IpernityObject):
     def delete(self, **kwargs):
         return kwargs, _none
 
+    # notes
+    @call('doc.notes.add')
+    def notes_add(self, **kwargs):
+        kwargs = _convert_iobj(kwargs, 'member')
+        return kwargs, lambda r: Note(**r['note'])
+
     # tags handling
     @call('doc.tags.add')
     def tags_add(self, **kwargs):
@@ -521,6 +527,7 @@ class Faves(IpernityObject):
 
 
 class Tag(IpernityObject):
+    __id__ = 'id'
     __display__ = ['id', 'tag']
     __convertors__ = [
         (['added_at'], _ts2datetime),
@@ -542,7 +549,22 @@ class Tag(IpernityObject):
     @call('tags.docs.getList')
     def docs_getList(self, **kwargs):
         if 'type' not in kwargs:
-            raise IpernityError('param: "type" is required')
+            raise IpernityError('param: "type is required')
         kwargs = _convert_iobj(kwargs, 'user')
-        kwargs['id'] = self.id
         return kwargs, _format_result_docs
+
+
+class Note(IpernityObject):
+    __id__ = 'note_id'
+    __convertors__ = [
+        (['x', 'y', 'w', 'h'], int),
+        (['posted_at'], _ts2datetime),
+    ]
+
+    @call('doc.notes.edit')
+    def edit(self, **kwargs):
+        return kwargs, lambda r: self._set_props(**r['note'])
+
+    @call('doc.notes.delete')
+    def delete(self, **kwargs):
+        return kwargs, _none

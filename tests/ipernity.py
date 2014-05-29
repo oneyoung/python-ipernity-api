@@ -212,6 +212,19 @@ class IpernityTest(TestCase):
         for t in tags:
             doc.tags_remove(tag=t, type='keyword')
 
+    def test_Note(self):
+        doc = self.docs[0]
+        note = doc.notes_add(content='note', x=0, y=0, w=50, h=50)
+        # note fields verify
+        self.assertIsInstance(note.x, int)
+        self.assertIsInstance(note.w, int)
+        self.assertIsInstance(note.posted_at, datetime.datetime)
+        # edit
+        note.edit(content='edited note', x=0, y=0, w=50, h=50)
+        self.assertEquals(note.content, 'edited note')
+        # delete
+        note.delete()
+
     def upload_files(self):
         ''' upload some test image and return '''
         # should upload at least 2 files
