@@ -61,7 +61,7 @@ def call(api_method, force_auth=False):
                 params[idname] = self.id
             # required parameters checking
             if not all([p in params for p in requires]):
-                raise IpernityError('parameters missing, required: %s' % ','.join(requires))
+                raise IpernityError('parameters missing, required: %s' % ', '.join(requires))
             resp = request(**params)
             return format_result(resp)
         return wrapper

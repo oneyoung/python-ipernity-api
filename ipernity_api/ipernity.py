@@ -567,3 +567,41 @@ class Note(IpernityObject):
     @call('doc.notes.delete')
     def delete(self, **kwargs):
         return kwargs, _none
+
+
+class Comment(IpernityObject):
+    __id__ = 'comment_id'
+    __convertors__ = [
+        (['posted_at'], _ts2datetime),
+        (['candelete', 'canedit', 'canreply'], bool),
+    ]
+    __replace__ = [
+        ('parent_id', 'parent', lambda cid: Comment(id=cid)),
+        ('user_id', 'user', lambda uid: User(id=uid)),
+    ]
+
+    @static_call('doc.comments.add')
+    def add(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'doc')
+        return kwargs, lambda r: Comment(**r['comment'])
+
+    @call('doc.comments.delete')
+    def delete(self, **kwargs):
+        return kwargs, _none
+
+    @call('doc.comments.edit')
+    def edit(self, **kwargs):
+        return kwargs, lambda r: self._set_props(**r['comment'])
+
+    @call('doc.comments.get')
+    def get(self, **kwargs):
+        return kwargs, lambda r: Comment(**r['comment'])
+
+    @call('doc.comments.reply')
+    def reply(self, **kwargs):
+        return kwargs, lambda r: Comment(**r['comment'])
+
+    @static_call('doc.comments.getList')
+    def getList(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'doc')
+        return kwargs, _resp2ilist('comment', _dict_str2int, lambda c: Comment(**c))
