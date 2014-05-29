@@ -225,6 +225,11 @@ class IpernityTest(TestCase):
         # delete
         note.delete()
 
+        # Note.notes_add
+        note = ipernity.Note.add(content='note', x=0, y=0, w=50, h=50, doc=doc)
+        self.assertIsInstance(note, ipernity.Note)
+        note.delete()
+
     def upload_files(self):
         ''' upload some test image and return '''
         # should upload at least 2 files

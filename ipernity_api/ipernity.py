@@ -561,6 +561,12 @@ class Note(IpernityObject):
         (['posted_at'], _ts2datetime),
     ]
 
+    @static_call('doc.notes.add')
+    def add(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'member')
+        kwargs = _convert_iobj(kwargs, 'doc')
+        return kwargs, lambda r: Note(**r['note'])
+
     @call('doc.notes.edit')
     def edit(self, **kwargs):
         return kwargs, lambda r: self._set_props(**r['note'])
