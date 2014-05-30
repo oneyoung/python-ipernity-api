@@ -180,19 +180,20 @@ def _resp2ilist(key, func_info, func_list, sec=''):
     return convertor
 
 
-_format_result_docs = _resp2ilist('doc', _dict_str2int, lambda d: Doc(**d))
 _format_result_albums = _resp2ilist('album', _dict_str2int, lambda d: Album(**d))
+_format_result_docs = _resp2ilist('doc', _dict_str2int, lambda d: Doc(**d))
 _format_result_faves = _resp2ilist('fave', _dict_str2int, lambda f: {
     'user': User(id=f.get('user_id'), username=f.get('username', '')),
     'faved_at': _ts2datetime(f.get('faved_at', 0)),
 })
+_format_result_groups = _resp2ilist('group', _dict_str2int, lambda g: Group(**g))
+_format_result_network = _resp2ilist('user', _dict_str2int,
+                                     lambda u: User(**u), sec='network')
 _format_result_tags = _resp2ilist('tag', _dict_mapping_func([('count', int),
                                                              ('total', int),
                                                              ('added', int),
                                                              ('dropped', int)]),
                                   lambda t: Tag(**t))
-_format_result_network = _resp2ilist('user', _dict_str2int,
-                                     lambda u: User(**u), sec='network')
 
 
 class Test(IpernityObject):
@@ -237,6 +238,9 @@ class User(IpernityObject):
 
     def getNetworks(self, **kwargs):
         return Network.getList(user=self, **kwargs)
+
+    def getGroups(self, **kwargs):
+        return Group.getList(user=self, **kwargs)
 
 
 class Quota(IpernityObject):
@@ -405,6 +409,13 @@ def _conv_you(you):
         ('isfave', bool),
         ('visits', int),
         ('last_visit', _ts2datetime),
+        # you in group.get
+        ('joined_at', _ts2datetime),
+        ('visited_at', _ts2datetime),
+        ('isadmin', bool),
+        ('ismoderator', bool),
+        ('ismember', bool),
+        ('docs', int),
     ]
     return _dict_mapping(you, mapping)
 
@@ -633,3 +644,81 @@ class Network(IpernityObject):
     @static_call('network.docs.getRecent')
     def docs_getRecent(**kwargs):
         return kwargs, _format_result_docs
+
+
+class Group(IpernityObject):
+    __id__ = 'group_id'
+    __display__ = ['id', 'title']
+    __convertors__ = [
+        (['can', 'visibility'], _dict_conv(bool)),
+        (['quota', 'count'], _dict_str2int),
+        (['dates'], _dict_conv(_ts2datetime)),
+        (['you'], _conv_you),
+    ]
+
+    @static_call('group.getList')
+    def getList(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'user')
+        return kwargs, _format_result_groups
+
+    @static_call('group.search')
+    def search(**kwargs):
+        return kwargs, _format_result_groups
+
+    @call('group.get', True)
+    def get(self, **kwargs):
+        return kwargs, lambda r: Group(**r['group'])
+
+    @call('group.get', True)
+    def update(self, **kwargs):
+        return kwargs, lambda r: self._set_props(**r['group'])
+
+    def _docs_add_remove(self, **kwargs):
+        def format_result(resp):
+            def format_doc(doc):
+                doc['doc'] = Doc(id=doc.pop('doc_id'))
+                for k in ['added', 'pending', 'error', 'removed']:
+                    if k in doc:
+                        doc[k] = bool(doc[k])
+                return doc
+
+            info = resp['group']
+            info.pop('group_id', None)
+            docs = [format_doc(doc) for doc in info.pop('doc', [])]
+            info = _dict_str2int(info)
+            return IpernityList(docs, info)
+
+        if 'docs' in kwargs:
+            docs = ','.join([d.id if isinstance(d, Doc) else d
+                             for d in kwargs.pop('docs')])
+            kwargs['doc_id'] = docs
+        return kwargs, format_result
+
+    @call('group.docs.add')
+    def docs_add(self, **kwargs):
+        return self._docs_add_remove(**kwargs)
+
+    @call('group.docs.remove')
+    def docs_remove(self, **kwargs):
+        return self._docs_add_remove(**kwargs)
+
+    @call('group.docs.getList')
+    def docs_getList(self, **kwargs):
+        kwargs = _convert_iobj(kwargs, 'user')
+        return kwargs, lambda r: _format_result_docs(r['group'])
+
+    @call('group.docs.getContext')
+    def docs_getContext(self, **kwargs):
+        def format_result(resp):
+            info = resp
+            return {
+                'doc': Doc(**info['doc']),
+                'prev': _resp2ilist('doc', _dict_str2int,
+                                    lambda d: Doc(**d), sec='prev')(info),
+                'next': _resp2ilist('doc', _dict_str2int,
+                                    lambda d: Doc(**d), sec='next')(info),
+                'total': int(info['group']['total']),
+            }
+        kwargs = _convert_iobj(kwargs, 'doc')
+        kwargs = _convert_iobj(kwargs, 'user')
+        return kwargs, format_result

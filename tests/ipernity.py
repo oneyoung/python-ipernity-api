@@ -265,6 +265,8 @@ class IpernityTest(TestCase):
         c2.delete()
 
     def test_Network(self):
+        # Note: in order to have a full test, need to add somebody manually in
+        # network on ipernity.com
         user = self.user
         networks = user.getNetworks()
         self.assertIsInstance(networks.info['count'], int)
@@ -279,3 +281,45 @@ class IpernityTest(TestCase):
         docs = ipernity.Network.docs_getRecent()
         self.assertIsInstance(docs.info['count'], int)
         self.assertTrue(all([isinstance(doc, ipernity.Doc) for doc in docs]))
+
+    def test_Group(self):
+        # Note: need to manually add Group in ipernity.com
+        user = self.user
+        # getList
+        groups = user.getGroups()
+        self.assertIsInstance(groups.info['total'], int)
+        if len(groups):
+            group = groups[0]
+            # fetch detail
+            group.update()
+            # field validation
+            self.assertIsInstance(group.can['add_doc'], bool)
+            self.assertIsInstance(group.visibility['ispublic'], bool)
+            self.assertIsInstance(group.quota['max'], int)
+            self.assertIsInstance(group.count['docs'], int)
+            self.assertIsInstance(group.dates['created_at'], datetime.datetime)
+            self.assertIsInstance(group.you['isadmin'], bool)
+            self.assertIsInstance(group.you['joined_at'], datetime.datetime)
+            self.assertIsInstance(group.you['docs'], int)
+
+            # search test
+            ret = ipernity.Group.search(text=group.title)
+            self.assertTrue(all([isinstance(g, ipernity.Group) for g in ret]))
+
+            # docs_add
+            docs = self.docs[:2]
+            ret = group.docs_add(docs=docs)
+            self.assertTrue(ret.info['total'] > 0)
+            self.assertTrue(any([docs[0].id == r['doc'].id for r in ret]))
+            # docs_getList
+            ret = group.docs_getList(user=self.user)
+            self.assertTrue(ret.info['total'] > 0)
+            self.assertTrue(any([docs[0].id == d.id for d in ret]))
+            # docs_getContext
+            ret = group.docs_getContext(doc=docs[1])
+            self.assertTrue(ret['total'] > 0)
+            self.assertEquals(ret['doc'].id, docs[1].id)
+            all_docs = ret['prev'] + ret['next']
+            self.assertTrue(any([docs[0].id == d.id for d in all_docs]))
+            # docs_remove
+            ret = group.docs_remove(docs=docs)
