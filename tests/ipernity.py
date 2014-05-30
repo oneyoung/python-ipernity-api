@@ -234,3 +234,32 @@ class IpernityTest(TestCase):
 
         files = ['1.jpg', '2.jpg']
         return [upload_img(fname) for fname in files]
+
+    def test_Comment(self):
+        doc = self.docs[0]
+        c1 = doc.comments_add(content='content1')
+        c2 = doc.comments_add(content='content2')
+
+        # getList
+        comms = doc.comments_getList()
+        self.assertTrue(comms.info['count'] >= 2)
+        self.assertTrue(any([c1.id == c.id for c in comms]))
+        self.assertTrue(any([c2.id == c.id for c in comms]))
+
+        # edit
+        c1.edit(content='new')
+        self.assertEquals(c1.content, 'new')
+
+        # reply
+        r = c1.reply(content='reply')
+        # get
+        g = r.get()
+        # fields checking
+        self.assertIsInstance(g.posted_at, datetime.datetime)
+        self.assertIsInstance(g.user, ipernity.User)
+        self.assertIsInstance(g.parent, ipernity.Comment)
+        self.assertIsInstance(g.canedit, bool)
+        self.assertIsInstance(g.canreply, bool)
+
+        c1.delete()
+        c2.delete()

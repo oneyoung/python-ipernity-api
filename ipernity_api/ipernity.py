@@ -456,6 +456,13 @@ class Doc(IpernityObject):
     def delete(self, **kwargs):
         return kwargs, _none
 
+    # comments
+    def comments_add(self, **kwargs):
+        return Comment.add(doc=self, **kwargs)
+
+    def comments_getList(self, **kwargs):
+        return Comment.getList(doc=self, **kwargs)
+
     # notes
     @call('doc.notes.add')
     def notes_add(self, **kwargs):
