@@ -162,16 +162,17 @@ def _dict_list2str(kwargs, keys):
 
 
 ### format result functions
-def _resp2ilist(key, func_info, func_list):
+def _resp2ilist(key, func_info, func_list, sec=''):
     ''' function generator for converting response to IpernityList
 
     parameters:
         name: the key of dict which point to the list
         func_info: func to convert info part
         func_list: func to convert list elem
+        sec: section name, if not provided, will use: key + 's'
     '''
     def convertor(resp):
-        sec_name = key + 's'  # section name
+        sec_name = sec or key + 's'  # section name
         info = resp[sec_name]
         data = [func_list(e) for e in info.pop(key, [])]
         info = func_info(info)
@@ -190,6 +191,8 @@ _format_result_tags = _resp2ilist('tag', _dict_mapping_func([('count', int),
                                                              ('added', int),
                                                              ('dropped', int)]),
                                   lambda t: Tag(**t))
+_format_result_network = _resp2ilist('user', _dict_str2int,
+                                     lambda u: User(**u), sec='network')
 
 
 class Test(IpernityObject):
@@ -220,17 +223,20 @@ class User(IpernityObject):
     def getQuota(**kwargs):
         return kwargs, lambda r: Quota(**r['quota'])
 
-    def getDocs(self):
-        return Doc.getList(user=self)
+    def getDocs(self, **kwargs):
+        return Doc.getList(user=self, **kwargs)
 
-    def getAlbums(self):
-        return Album.getList(user=self)
+    def getAlbums(self, **kwargs):
+        return Album.getList(user=self, **kwargs)
 
-    def getTags(self, type='keyword'):
-        return Tag.user_getList(user=self, type=type)
+    def getTags(self, type='keyword', **kwargs):
+        return Tag.user_getList(user=self, type=type, **kwargs)
 
-    def getPopularTags(self, type='keyword'):
-        return Tag.user_getPopular(user=self, type=type)
+    def getPopularTags(self, type='keyword', **kwargs):
+        return Tag.user_getPopular(user=self, type=type, **kwargs)
+
+    def getNetworks(self, **kwargs):
+        return Network.getList(user=self, **kwargs)
 
 
 class Quota(IpernityObject):
@@ -612,3 +618,18 @@ class Comment(IpernityObject):
     def getList(**kwargs):
         kwargs = _convert_iobj(kwargs, 'doc')
         return kwargs, _resp2ilist('comment', _dict_str2int, lambda c: Comment(**c))
+
+
+class Network(IpernityObject):
+    @static_call('network.autocomplete')
+    def autocomplete(**kwargs):
+        return kwargs, _format_result_network
+
+    @static_call('network.getList')
+    def getList(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'user')
+        return kwargs, _format_result_network
+
+    @static_call('network.docs.getRecent')
+    def docs_getRecent(**kwargs):
+        return kwargs, _format_result_docs

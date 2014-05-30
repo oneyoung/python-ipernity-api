@@ -263,3 +263,19 @@ class IpernityTest(TestCase):
 
         c1.delete()
         c2.delete()
+
+    def test_Network(self):
+        user = self.user
+        networks = user.getNetworks()
+        self.assertIsInstance(networks.info['count'], int)
+        self.assertTrue(all([isinstance(u, ipernity.User) for u in networks]))
+        # auto complete
+        if len(networks):
+            u = networks[0]
+            ret = ipernity.Network.autocomplete(query=u.username)
+            self.assertIsInstance(ret.info['count'], int)
+            self.assertTrue(all([isinstance(u, ipernity.User) for u in ret]))
+        # docs_getRecent
+        docs = ipernity.Network.docs_getRecent()
+        self.assertIsInstance(docs.info['count'], int)
+        self.assertTrue(all([isinstance(doc, ipernity.Doc) for doc in docs]))
