@@ -327,3 +327,18 @@ class IpernityTest(TestCase):
             ret = group.docs_remove(docs=docs)
         else:
             raise utils.TestCaseError('tested account has no groups, need manually add in ipernity.com')
+
+    def test_Explore(self):
+        docs = ipernity.Explore.docs_getPopular()
+        self.assertIsInstance(docs.info['total'], int)
+        self.assertTrue(all([isinstance(doc, ipernity.Doc) for doc in docs]))
+
+        docs = ipernity.Explore.docs_getRecent()
+        self.assertIsInstance(docs.info['count'], int)
+        self.assertTrue(all([isinstance(doc, ipernity.Doc) for doc in docs]))
+
+        docs = ipernity.Explore.docs_homepage()
+        self.assertTrue(all([isinstance(doc, ipernity.Doc) for doc in docs]))
+
+        groups = ipernity.Explore.groups_getRandom()
+        self.assertTrue(all([isinstance(g, ipernity.Group) for g in groups]))

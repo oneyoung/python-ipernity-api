@@ -722,3 +722,21 @@ class Group(IpernityObject):
         kwargs = _convert_iobj(kwargs, 'doc')
         kwargs = _convert_iobj(kwargs, 'user')
         return kwargs, format_result
+
+
+class Explore(IpernityObject):
+    @static_call('explore.docs.getPopular')
+    def docs_getPopular(**kwargs):
+        return kwargs, _format_result_docs
+
+    @static_call('explore.docs.getRecent')
+    def docs_getRecent(**kwargs):
+        return kwargs, _format_result_docs
+
+    @static_call('explore.docs.homepage')
+    def docs_homepage(**kwargs):
+        return kwargs, _format_result_docs
+
+    @static_call('explore.groups.getRandom')
+    def groups_getRandom(**kwargs):
+        return kwargs, _format_result_groups
