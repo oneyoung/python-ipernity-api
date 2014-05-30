@@ -1,6 +1,11 @@
 import os
 from ipernity_api import auth
 
+
+class TestCaseError(Exception):
+    pass
+
+
 AUTH_FILE_PATH = '.tests.ipernity_auto_auth.tmp'
 AUTH_HANDLER = None
 

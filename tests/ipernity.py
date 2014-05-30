@@ -277,6 +277,8 @@ class IpernityTest(TestCase):
             ret = ipernity.Network.autocomplete(query=u.username)
             self.assertIsInstance(ret.info['count'], int)
             self.assertTrue(all([isinstance(u, ipernity.User) for u in ret]))
+        else:
+            raise utils.TestCaseError('tested account has no networks, need manually add in ipernity.com')
         # docs_getRecent
         docs = ipernity.Network.docs_getRecent()
         self.assertIsInstance(docs.info['count'], int)
@@ -323,3 +325,5 @@ class IpernityTest(TestCase):
             self.assertTrue(any([docs[0].id == d.id for d in all_docs]))
             # docs_remove
             ret = group.docs_remove(docs=docs)
+        else:
+            raise utils.TestCaseError('tested account has no groups, need manually add in ipernity.com')
