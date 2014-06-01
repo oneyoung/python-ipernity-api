@@ -78,20 +78,27 @@ class IpernityTest(TestCase):
         self.assertEqual(ret.info['count'], 0)
         # Faves add and getList
         Faves.albums_add(album=album)  # add by Faves
-        ret = Faves.albums_getList(user=self.user, owner=self.user)  # verifiy Faves list
+        # verifiy Faves list
+        ret = Faves.albums_getList(user=self.user, owner=self.user)
         self.assertTrue(ret.info['total'] > 0)
         self.assertTrue(any([a.id == album.id for a in ret]))
         # album.getFaves
         # TODO: this fail, wired
-        #ret = album.getFaves()
-        #ts = ret[0]['faved_at']
-        #self.assertIsInstance(ts, datetime.datetime)
-        #user = ret[0]['user']  # only one user faves
-        #self.assertTrue(user.id == self.user.id)
+        # ret = album.getFaves()
+        # ts = ret[0]['faved_at']
+        # self.assertIsInstance(ts, datetime.datetime)
+        # user = ret[0]['user']  # only one user faves
+        # self.assertTrue(user.id == self.user.id)
         # remove it
         Faves.albums_remove(album=album)
-        ret = Faves.albums_getList(user=self.user, owner=self.user)  # verifiy Faves list
-        self.assertFalse(any([a.id == album.id for a in ret.data]))  # should not found
+        # verifiy Faves list
+        ret = Faves.albums_getList(user=self.user, owner=self.user)
+        # should not found
+        self.assertFalse(any([a.id == album.id for a in ret.data]))
+
+        # getVisitors
+        ret = album.getVisitors()
+        self.assertIsInstance(ret.info['total'], int)
 
         # edit test
         new_title = 'New title'
@@ -108,7 +115,8 @@ class IpernityTest(TestCase):
         album = ipernity.Album.get(id=album_id)
         album.delete()
         # after delete, album shoult not found
-        with self.assertRaisesRegexp(errors.IpernityAPIError, 'Album not found'):
+        with self.assertRaisesRegexp(errors.IpernityAPIError,
+                                     'Album not found'):
             ipernity.Album.get(id=album_id)
 
     def test_Folder(self):
@@ -120,7 +128,7 @@ class IpernityTest(TestCase):
         folder_id = folder.id
         # after created, folder can retrieve by get
         # TODO: this fail
-        #folder = ipernity.Folder.get(id=folder_id)
+        # folder = ipernity.Folder.get(id=folder_id)
 
         folder.delete()
         with self.assertRaisesRegexp(errors.IpernityAPIError, 'not found'):
@@ -129,8 +137,8 @@ class IpernityTest(TestCase):
     def test_Upload(self):
         ticket = ipernity.Upload.file(file=getfile('1.jpg'))
         ipernity.Upload.checkTickets(tickets=[ticket])
-        #ticket.wait_done()
-        #doc = ticket.doc
+        # ticket.wait_done()
+        # doc = ticket.doc
         doc = ticket.getDoc()
 
         # doc field test
@@ -276,9 +284,10 @@ class IpernityTest(TestCase):
             u = networks[0]
             ret = ipernity.Network.autocomplete(query=u.username)
             self.assertIsInstance(ret.info['count'], int)
-            self.assertTrue(all([isinstance(u, ipernity.User) for u in ret]))
+            self.assertTrue(all([isinstance(u0, ipernity.User) for u0 in ret]))
         else:
-            raise utils.TestCaseError('tested account has no networks, need manually add in ipernity.com')
+            raise utils.TestCaseError('tested account has no networks, \
+                                      need manually add in ipernity.com')
         # docs_getRecent
         docs = ipernity.Network.docs_getRecent()
         self.assertIsInstance(docs.info['count'], int)
@@ -326,7 +335,8 @@ class IpernityTest(TestCase):
             # docs_remove
             ret = group.docs_remove(docs=docs)
         else:
-            raise utils.TestCaseError('tested account has no groups, need manually add in ipernity.com')
+            raise utils.TestCaseError('tested account has no groups, \
+                                      need manually add in ipernity.com')
 
     def test_Explore(self):
         docs = ipernity.Explore.docs_getPopular()

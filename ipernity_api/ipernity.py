@@ -25,7 +25,7 @@ class IpernityObject(object):
     __replace__ = []
     # __display__ fields to be shown in __str__, default only show id
     __display__ = []
-    # attr name that represent object's id in ipernity.com, e,g photo_id, user_id
+    # attr name represent object's id in ipernity.com, e,g photo_id, user_id
     # if present, will add a filed that call 'id'
     __id__ = ''
 
@@ -43,7 +43,8 @@ class IpernityObject(object):
         clsname = cls.__name__
         fields = cls.__display__ or [cls.__id__]
         info = ' '.join(['%s:%s' % (attr, getattr(self, attr))
-                         for attr in filter(lambda a: hasattr(self, a), fields)])
+                         for attr in
+                         filter(lambda a: hasattr(self, a), fields)])
         return '%s[%s]' % (clsname, info)
 
     def _set_props(self, **params):
@@ -108,7 +109,8 @@ def _ts2datetime(ts):
         try:
             return datetime.datetime.strptime(ts, '%Y-%m-%d %H:%M:%S')
         except ValueError:
-        # timestamp might be '0000-00-00 00:00:00', and will raise ValueError
+            # timestamp might be '0000-00-00 00:00:00',
+            # and will raise ValueError
             return None
     else:
         return ts or None
@@ -161,7 +163,7 @@ def _dict_list2str(kwargs, keys):
     return kwargs
 
 
-### format result functions
+# ### format result functions
 def _resp2ilist(key, func_info, func_list, sec=''):
     ''' function generator for converting response to IpernityList
 
@@ -180,20 +182,45 @@ def _resp2ilist(key, func_info, func_list, sec=''):
     return convertor
 
 
-_format_result_albums = _resp2ilist('album', _dict_str2int, lambda d: Album(**d))
+_format_result_albums = _resp2ilist('album', _dict_str2int,
+                                    lambda d: Album(**d))
 _format_result_docs = _resp2ilist('doc', _dict_str2int, lambda d: Doc(**d))
 _format_result_faves = _resp2ilist('fave', _dict_str2int, lambda f: {
     'user': User(id=f.get('user_id'), username=f.get('username', '')),
     'faved_at': _ts2datetime(f.get('faved_at', 0)),
 })
-_format_result_groups = _resp2ilist('group', _dict_str2int, lambda g: Group(**g))
+_format_result_groups = _resp2ilist('group', _dict_str2int,
+                                    lambda g: Group(**g))
 _format_result_network = _resp2ilist('user', _dict_str2int,
                                      lambda u: User(**u), sec='network')
 _format_result_tags = _resp2ilist('tag', _dict_mapping_func([('count', int),
                                                              ('total', int),
-                                                             ('added', int),
-                                                             ('dropped', int)]),
+                                                             ('dropped', int),
+                                                             ('added', int)]),
                                   lambda t: Tag(**t))
+
+
+def _format_result_visitors(resp):
+    info = resp['visits']
+    mapping = [
+        ('visited_at', _ts2datetime),
+        ('first_visit_at', _ts2datetime),
+        ('visits', int),
+    ]
+
+    def conv_visit(visit):
+        uid = visit.pop('user_id')
+        uname = visit.pop('username')
+        visit = _dict_mapping(visit, mapping)
+        visit['user'] = User(id=uid, username=uname)
+        return visit
+
+    visits = [conv_visit(v) for v in info.pop('visit', [])]
+    if 'anonymous' in info:
+        info['anonymous'] = _dict_mapping(info['anonymous'], mapping)
+    info = _dict_str2int(info)
+
+    return IpernityList(visits, info)
 
 
 class Test(IpernityObject):
@@ -278,7 +305,8 @@ class Album(IpernityObject):
     @static_call('album.getList')
     def getList(**kwargs):
         kwargs = _convert_iobj(kwargs, 'user')
-        return kwargs, _resp2ilist('album', _dict_str2int, lambda d: Album(**d))
+        return kwargs, _resp2ilist('album', _dict_str2int,
+                                   lambda d: Album(**d))
 
     @call('album.delete')
     def delete(self, **kwargs):
@@ -293,6 +321,10 @@ class Album(IpernityObject):
     @call('album.getFaves')
     def getFaves(self, **kwargs):
         return kwargs, _format_result_faves
+
+    @call('album.getVisitors')
+    def getVisitors(self, **kwargs):
+        return kwargs, _format_result_visitors
 
     @call('album.docs.add')
     def docs_add(self, **kwargs):
@@ -356,7 +388,8 @@ class Upload(IpernityObject):
         tickets = kwargs.pop('tickets')
         kwargs['tickets'] = ','.join([t.id if isinstance(t, Ticket) else t
                                       for t in tickets])
-        return kwargs, _resp2ilist('ticket', _dict_str2int, lambda d: Ticket(**d))
+        return kwargs, _resp2ilist('ticket', _dict_str2int,
+                                   lambda d: Ticket(**d))
 
 
 class Ticket(IpernityObject):
@@ -389,7 +422,8 @@ class Ticket(IpernityObject):
             raise IpernityError('Ticket: %s Invalid' % self)
 
         left = timeout
-        while not getattr(self, 'done', False) and left > 0:  # wait upload complete
+        while not getattr(self, 'done', False) and left > 0:
+            # wait upload complete
             # first time, Ticket only init with id, not 'eta' field provide
             eta = getattr(self, 'eta', 0)
             left -= eta
@@ -628,7 +662,8 @@ class Comment(IpernityObject):
     @static_call('doc.comments.getList')
     def getList(**kwargs):
         kwargs = _convert_iobj(kwargs, 'doc')
-        return kwargs, _resp2ilist('comment', _dict_str2int, lambda c: Comment(**c))
+        return kwargs, _resp2ilist('comment', _dict_str2int,
+                                   lambda c: Comment(**c))
 
 
 class Network(IpernityObject):
