@@ -100,6 +100,12 @@ class IpernityTest(TestCase):
         ret = album.getVisitors()
         self.assertIsInstance(ret.info['total'], int)
 
+        # setPerms
+        album.setPerms(perm_comment=4)
+
+        # orderList
+        ipernity.Album.orderList(albums=[album])
+
         # edit test
         new_title = 'New title'
         new_desc = 'This is a new description'

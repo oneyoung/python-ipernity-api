@@ -326,6 +326,18 @@ class Album(IpernityObject):
     def getVisitors(self, **kwargs):
         return kwargs, _format_result_visitors
 
+    @static_call('album.orderList')
+    def orderList(**kwargs):
+        if 'albums' in kwargs:
+            albums = ','.join([a.id if isinstance(a, Album) else a
+                               for a in kwargs.pop('albums')])
+            kwargs['album_ids'] = albums
+        return kwargs, _none
+
+    @call('album.setPerms')
+    def setPerms(self, **kwargs):
+        return kwargs, _none
+
     @call('album.docs.add')
     def docs_add(self, **kwargs):
         def format_result(resp):
