@@ -34,11 +34,12 @@ def call_api(api_method, api_key=None, api_secret=None, signed=False,
     kwargs['api_key'] = api_key
 
     url = "http://api.ipernity.com/api/%s/%s" % (api_method, 'json')
-    if authed:
-        from . import auth
-        auth_handler = auth_handler or auth.AUTH_HANDLER
-        if not auth_handler:
-            raise IpernityError('no auth_handler provided')
+
+    from . import auth
+    auth_handler = auth_handler or auth.AUTH_HANDLER
+    if authed and not auth_handler:
+        raise IpernityError('no auth_handler provided')
+    elif auth_handler:
         if isinstance(auth_handler, auth.OAuthAuthHandler):
             kwargs = auth_handler.sign_params(url, kwargs, http_post)
     else:

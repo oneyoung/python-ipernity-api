@@ -270,12 +270,12 @@ class Album(IpernityObject):
         kwargs = _convert_iobj(kwargs, 'cover')
         return kwargs, lambda r: Album(**r['album'])
 
-    @static_call('album.get', force_auth=True)
+    @static_call('album.get')
     def get(**kwargs):
         kwargs = _replaceid(kwargs, Album.__id__)
         return kwargs, lambda r: Album(**r['album'])
 
-    @static_call('album.getList', True)
+    @static_call('album.getList')
     def getList(**kwargs):
         kwargs = _convert_iobj(kwargs, 'user')
         return kwargs, _resp2ilist('album', _dict_str2int, lambda d: Album(**d))
@@ -334,7 +334,7 @@ class Folder(IpernityObject):
     def create(**kwargs):
         return kwargs, lambda r: Folder(**r['folder'])
 
-    @static_call('folder.get', force_auth=True)
+    @static_call('folder.get')
     def get(**kwargs):
         kwargs = _replaceid(kwargs, Folder.__id__)
         return kwargs, lambda r: Folder(**r['folder'])
@@ -665,11 +665,11 @@ class Group(IpernityObject):
     def search(**kwargs):
         return kwargs, _format_result_groups
 
-    @call('group.get', True)
+    @call('group.get')
     def get(self, **kwargs):
         return kwargs, lambda r: Group(**r['group'])
 
-    @call('group.get', True)
+    @call('group.get')
     def update(self, **kwargs):
         return kwargs, lambda r: self._set_props(**r['group'])
 

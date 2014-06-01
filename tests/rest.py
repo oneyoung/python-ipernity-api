@@ -1,5 +1,6 @@
 from unittest import TestCase
 from ipernity_api import rest, errors, keys
+from ipernity_api import auth
 
 
 class RESTTest(TestCase):
@@ -36,9 +37,12 @@ class RESTTest(TestCase):
 
     def test_call_api_signed(self):
         method = 'auth.getFrob'
+        authhandler = auth.AUTH_HANDLER
+        auth.set_auth_handler(None)
         # calling to a signed method without signed request should recive exception
         with self.assertRaisesRegexp(errors.IpernityAPIError, 'Signature'):
             rest.call_api(method)
 
         # this time should OK
         rest.call_api(method, signed=True)
+        auth.set_auth_handler(authhandler)
