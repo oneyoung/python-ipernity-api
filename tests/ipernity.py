@@ -187,6 +187,16 @@ class IpernityTest(TestCase):
         # This method will work someday... (ask us about if you need it)
         ipernity.Doc.checkMD5(md5s=['1cfe2ec123ac9eb7b6bdb5191c3efd40'])
 
+        # doc.getContext
+        doc = self.docs[1]
+        ret = doc.getContext()
+        self.assertEquals(ret['doc'].id, doc.id)
+        for d in ret['prev']:
+            self.assertIsInstance(d, ipernity.Doc)
+            self.assertIsInstance(d['index'], int)
+        self.assertTrue(all([isinstance(d, ipernity.Doc)
+                             for d in ret['next']]))
+
     def test_Tag(self):
         doc = self.docs[0]
         # add

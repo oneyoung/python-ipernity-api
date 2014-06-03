@@ -481,7 +481,7 @@ class Doc(IpernityObject):
     __id__ = 'doc_id'
     __display__ = ['id', 'title']
     __convertors__ = [
-        (['w', 'h', 'lehgth', 'bytes'], int),
+        (['w', 'h', 'lehgth', 'bytes', 'index'], int),
         (['dates'], _dict_conv(_ts2datetime)),
         (['count', 'visibility', 'permissions'], _dict_conv(int)),
         (['can'], _dict_conv(_str2bool)),
@@ -532,6 +532,18 @@ class Doc(IpernityObject):
                 'groups': _format_result_groups(resp),
             }
 
+        return kwargs, format_result
+
+    @call('doc.getContext')
+    def getContext(self, **kwargs):
+        def format_result(resp):
+            return {
+                'doc': Doc(**resp['doc']),
+                'prev': _resp2ilist('doc', _dict_str2int,
+                                    lambda d: Doc(**d), sec='prev')(resp),
+                'next': _resp2ilist('doc', _dict_str2int,
+                                    lambda d: Doc(**d), sec='next')(resp),
+            }
         return kwargs, format_result
 
     @call('doc.getFaves')
