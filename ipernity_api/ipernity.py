@@ -293,7 +293,7 @@ class Album(IpernityObject):
     __convertors__ = [
         (['count'], _dict_conv(int)),
         (['dates'], _dict_conv(_ts2datetime)),
-        (['cover'], lambda c: Doc(**c)),
+        (['cover'], lambda c: Doc(**c) if isinstance(c, dict) else c),
     ]
 
     @static_call('album.create')
@@ -523,6 +523,16 @@ class Doc(IpernityObject):
     def get(**kwargs):
         kwargs = _replaceid(kwargs, Doc.__id__)
         return kwargs, lambda r: Doc(**r['doc'])
+
+    @call('doc.getContainers')
+    def getContainers(self, **kwargs):
+        def format_result(resp):
+            return {
+                'albums': _format_result_albums(resp),
+                'groups': _format_result_groups(resp),
+            }
+
+        return kwargs, format_result
 
     @call('doc.getFaves')
     def getFaves(self, **kwargs):

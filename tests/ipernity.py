@@ -69,6 +69,9 @@ class IpernityTest(TestCase):
         # check result
         self.assertEqual(ret.info['total'], 1)
         self.assertIsInstance(ret[0]['added'], bool)
+        # doc.getContainers
+        ret = doc1.getContainers()
+        self.assertTrue(any([a.id == album.id for a in ret['albums']]))
         # add docs
         album.docs_add(docs=[doc1, doc2])
 
@@ -326,6 +329,9 @@ class IpernityTest(TestCase):
             ret = group.docs_add(docs=docs)
             self.assertTrue(ret.info['total'] > 0)
             self.assertTrue(any([docs[0].id == r['doc'].id for r in ret]))
+            # doc.getContainers
+            ret = docs[0].getContainers()
+            self.assertTrue(any([g.id == group.id for g in ret['groups']]))
             # docs_getList
             ret = group.docs_getList(user=self.user)
             self.assertTrue(ret.info['total'] > 0)
