@@ -209,6 +209,9 @@ class IpernityTest(TestCase):
         self.assertIsInstance(ret['permissions']['comment'], int)
         self.assertIsInstance(ret['can']['fave'], bool)
 
+        # doc.setPerms
+        doc.setPerms(perm_tagme=1)
+
     def test_Tag(self):
         doc = self.docs[0]
         # add

@@ -29,7 +29,8 @@ def call(api_method):
         "params" is a dict consist of parameters to ipernity api method.
         "format_result" is a function to decode json resonpse.
     * return value of decorated function:
-        api json resonpse will be decoded by "format_result" function and return to caller.
+        api json resonpse will be decoded by "format_result" function
+        and return to caller.
     '''
     # use two level decorator here:
     # level 1: "call" to accept decorator paramter 'api_method'
@@ -57,7 +58,8 @@ def call(api_method):
                 params[idname] = self.id
             # required parameters checking
             if not all([p in params for p in requires]):
-                raise IpernityError('parameters missing, required: %s' % ', '.join(requires))
+                raise IpernityError('parameters missing, required: %s'
+                                    % ', '.join(requires))
             resp = request(**params)
             return format_result(resp)
         return wrapper
@@ -96,7 +98,8 @@ def static_call(api_method):
             params, format_result = func(*args, **kwargs)
             # required parameters checking
             if not all([p in params for p in requires]):
-                raise IpernityError('parameters missing, required: %s' % ','.join(requires))
+                raise IpernityError('parameters missing, required: %s'
+                                    % ','.join(requires))
             resp = request(**params)
             return format_result(resp)
         return StaticCaller(wrapper)

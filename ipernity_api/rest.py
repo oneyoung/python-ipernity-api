@@ -55,7 +55,8 @@ def call_api(api_method, api_key=None, api_secret=None, signed=False,
         if http_post:  # POST
             if 'file' in kwargs:  # upload file handling
                 fpath = kwargs['file']
-                files = [('file', os.path.basename(fpath), open(fpath, 'rb').read())]
+                files = [('file', os.path.basename(fpath),
+                          open(fpath, 'rb').read())]
                 resp_raw = posturl(url, kwargs.items(), files)
             else:
                 resp_raw = urllib2.urlopen(url, data).read()
@@ -69,7 +70,8 @@ def call_api(api_method, api_key=None, api_secret=None, signed=False,
     try:
         resp = json.loads(resp_raw)
     except ValueError, e:
-        raise IpernityError('Json decode error at: %s WITH Payload:\n%s' % (str(e), resp_raw))
+        raise IpernityError('Json decode error at: %s WITH Payload:\n%s'
+                            % (str(e), resp_raw))
     # check the response, if error happends, raise exception
     api = resp['api']
     if api['status'] == 'error':
@@ -100,8 +102,6 @@ def sign_keys(api_secret, kwargs, method=None):
 
     Note: kwargs would be sorted in alphabetical order when convert to string
     '''
-    # filter out special char '?&='
-    #sig_str = ''.join(filter(lambda c: c not in '?&=', data))
     param_keys = kwargs.keys()
     param_keys.sort()
     sig_str = ''.join(['%s%s' % (k, kwargs[k]) for k in param_keys])

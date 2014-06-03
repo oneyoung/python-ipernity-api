@@ -531,9 +531,12 @@ class Doc(IpernityObject):
     @call('doc.getContainers')
     def getContainers(self, **kwargs):
         def format_result(resp):
+            print resp
             return {
-                'albums': _format_result_albums(resp),
-                'groups': _format_result_groups(resp),
+                'albums': _format_result_albums(resp)
+                if 'albums' in resp else [],
+                'groups': _format_result_groups(resp)
+                if 'groups' in resp else [],
             }
 
         return kwargs, format_result
@@ -582,6 +585,10 @@ class Doc(IpernityObject):
                 'can': _dict_conv(_str2bool)(resp['can']),
             }
         return kwargs, format_result
+
+    @call('doc.setPerms')
+    def setPerms(self, **kwargs):
+        return kwargs, _none
 
     @call('doc.delete')
     def delete(self, **kwargs):
