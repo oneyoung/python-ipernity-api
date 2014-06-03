@@ -212,6 +212,9 @@ class IpernityTest(TestCase):
         # doc.setPerms
         doc.setPerms(perm_tagme=1)
 
+        # doc.getVisitor
+        doc.getVisitors()
+
     def test_Tag(self):
         doc = self.docs[0]
         # add

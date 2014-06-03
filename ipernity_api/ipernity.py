@@ -590,6 +590,10 @@ class Doc(IpernityObject):
     def setPerms(self, **kwargs):
         return kwargs, _none
 
+    @call('doc.getVisitors')
+    def getVisitors(self, **kwargs):
+        return kwargs, _format_result_visitors
+
     @call('doc.delete')
     def delete(self, **kwargs):
         return kwargs, _none
