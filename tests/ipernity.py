@@ -180,6 +180,10 @@ class IpernityTest(TestCase):
 
         doc.delete()
 
+    def test_Doc(self):
+        # This method will work someday... (ask us about if you need it)
+        ipernity.Doc.checkMD5(md5s=['1cfe2ec123ac9eb7b6bdb5191c3efd40'])
+
     def test_Tag(self):
         doc = self.docs[0]
         # add

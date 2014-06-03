@@ -493,6 +493,28 @@ class Doc(IpernityObject):
         kwargs = _convert_iobj(kwargs, 'user', 'user_id')
         return kwargs, _format_result_docs
 
+    @static_call('doc.checkMD5')
+    def checkMD5(**kwargs):
+        # This method will work someday... (ask us about if you need it)
+        def format_result(resp):
+            def conv_doc(d):
+                found = bool(int(d['found']))
+                d['found'] = found
+                if found:
+                    doc = Doc(id=d.pop('doc_id'))
+                    d['doc'] = doc
+                return d
+
+            info = resp['docs']
+            docs = [conv_doc(d) for d in info.pop('doc', [])]
+            info = _dict_str2int(info)
+            return IpernityList(docs, info)
+
+        if 'md5s' in kwargs:
+            md5s = ','.join(kwargs.pop('md5s', []))
+            kwargs['md5'] = md5s
+        return kwargs, format_result
+
     @static_call('doc.get')
     def get(**kwargs):
         kwargs = _replaceid(kwargs, Doc.__id__)
