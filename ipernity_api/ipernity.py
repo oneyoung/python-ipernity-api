@@ -79,6 +79,10 @@ def _none(resp):
     pass
 
 
+def _str2bool(s):
+    return bool(int(s))
+
+
 def _dict_str2int(d, recurse=True):
     ''' convert string to int, traverse dict '''
     for k, v in d.items():
@@ -237,7 +241,7 @@ class User(IpernityObject):
     __id__ = 'user_id'
     __display__ = ['id', 'username']
     __convertors__ = [
-        (['is_pro', 'is_online', 'is_closed'], bool),
+        (['is_pro', 'is_online', 'is_closed'], _str2bool),
         (['count'], _dict_conv(int)),
         (['dates'], _dict_conv(_ts2datetime)),
     ]
@@ -272,7 +276,7 @@ class User(IpernityObject):
 
 class Quota(IpernityObject):
     __convertors__ = [
-        (['is_pro'], bool),
+        (['is_pro'], _str2bool),
         (['upload'], _dict_str2int),
     ]
 
@@ -333,8 +337,8 @@ class Album(IpernityObject):
             info.pop('album_id', None)
             info = _dict_str2int(info, False)
             mapping = [
-                ('added', bool),
-                ('error', bool),
+                ('added', _str2bool),
+                ('error', _str2bool),
             ]
             docs = [_dict_mapping(d, mapping) for d in info.pop('doc', [])]
             return IpernityList(docs, info=info)
@@ -394,7 +398,7 @@ class Upload(IpernityObject):
 
 class Ticket(IpernityObject):
     __convertors__ = [
-        (['done', 'invalid'], bool),
+        (['done', 'invalid'], _str2bool),
         (['eta'], int),
     ]
 
@@ -440,15 +444,15 @@ class Ticket(IpernityObject):
 
 def _conv_you(you):
     mapping = [
-        ('isfave', bool),
+        ('isfave', _str2bool),
         ('visits', int),
         ('last_visit', _ts2datetime),
         # you in group.get
         ('joined_at', _ts2datetime),
         ('visited_at', _ts2datetime),
-        ('isadmin', bool),
-        ('ismoderator', bool),
-        ('ismember', bool),
+        ('isadmin', _str2bool),
+        ('ismoderator', _str2bool),
+        ('ismember', _str2bool),
         ('docs', int),
     ]
     return _dict_mapping(you, mapping)
@@ -480,7 +484,7 @@ class Doc(IpernityObject):
         (['w', 'h', 'lehgth', 'bytes'], int),
         (['dates'], _dict_conv(_ts2datetime)),
         (['count', 'visibility', 'permissions'], _dict_conv(int)),
-        (['can'], _dict_conv(bool)),
+        (['can'], _dict_conv(_str2bool)),
         (['you'], _conv_you),
         (['owner'], lambda r: User(**r)),
         (['thumbs'], lambda tbs: [Thumb(**tb) for tb in tbs['thumb']]),
@@ -498,7 +502,7 @@ class Doc(IpernityObject):
         # This method will work someday... (ask us about if you need it)
         def format_result(resp):
             def conv_doc(d):
-                found = bool(int(d['found']))
+                found = _str2bool(int(d['found']))
                 d['found'] = found
                 if found:
                     doc = Doc(id=d.pop('doc_id'))
@@ -653,7 +657,7 @@ class Comment(IpernityObject):
     __id__ = 'comment_id'
     __convertors__ = [
         (['posted_at'], _ts2datetime),
-        (['candelete', 'canedit', 'canreply'], bool),
+        (['candelete', 'canedit', 'canreply'], _str2bool),
     ]
     __replace__ = [
         ('parent_id', 'parent', lambda cid: Comment(id=cid)),
@@ -707,7 +711,7 @@ class Group(IpernityObject):
     __id__ = 'group_id'
     __display__ = ['id', 'title']
     __convertors__ = [
-        (['can', 'visibility'], _dict_conv(bool)),
+        (['can', 'visibility'], _dict_conv(_str2bool)),
         (['quota', 'count'], _dict_str2int),
         (['dates'], _dict_conv(_ts2datetime)),
         (['you'], _conv_you),
@@ -736,7 +740,7 @@ class Group(IpernityObject):
                 doc['doc'] = Doc(id=doc.pop('doc_id'))
                 for k in ['added', 'pending', 'error', 'removed']:
                     if k in doc:
-                        doc[k] = bool(doc[k])
+                        doc[k] = _str2bool(doc[k])
                 return doc
 
             info = resp['group']
