@@ -197,6 +197,12 @@ class IpernityTest(TestCase):
         self.assertTrue(all([isinstance(d, ipernity.Doc)
                              for d in ret['next']]))
 
+        # doc.getMedias
+        ret = doc.getMedias()
+        if ret['thumbs']:
+            self.assertTrue(all([isinstance(t, ipernity.Thumb)
+                                 for t in ret['thumbs']]))
+
     def test_Tag(self):
         doc = self.docs[0]
         # add

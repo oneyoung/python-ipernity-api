@@ -477,6 +477,10 @@ class Original(File):
     pass
 
 
+class Player(File):
+    pass
+
+
 class Doc(IpernityObject):
     __id__ = 'doc_id'
     __display__ = ['id', 'title']
@@ -550,6 +554,24 @@ class Doc(IpernityObject):
     def getFaves(self, **kwargs):
         kwargs = _convert_iobj(kwargs, 'doc')
         return kwargs, _format_result_faves
+
+    @call('doc.getMedias')
+    def getMedias(self, **kwargs):
+        def format_result(resp):
+            return {
+                'thumbs': [Thumb(**t)
+                           for t in resp['thumbs'].pop('thumb', [])]
+                if 'thumbs' in resp else [],
+                'medias': [Media(**m)
+                           for m in resp['medias'].pop('media', [])]
+                if 'medias' in resp else [],
+                'players': [Player(**p)
+                            for p in resp['players'].pop('player', [])]
+                if 'players'in resp else [],
+                'original': Original(**resp['original'])
+                if 'original' in resp else None
+            }
+        return kwargs, format_result
 
     @call('doc.delete')
     def delete(self, **kwargs):
