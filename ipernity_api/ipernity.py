@@ -590,9 +590,21 @@ class Doc(IpernityObject):
     def setPerms(self, **kwargs):
         return kwargs, _none
 
+    @call('doc.setLicense')
+    def setLicense(self, **kwargs):
+        return kwargs, _none
+
+    @call('doc.setGeo')
+    def setGeo(self, **kwargs):
+        return kwargs, _none
+
     @call('doc.getVisitors')
     def getVisitors(self, **kwargs):
         return kwargs, _format_result_visitors
+
+    @call('doc.set')
+    def set(self, **kwargs):
+        return kwargs, lambda r: self._set_props(**r['doc'])
 
     @call('doc.delete')
     def delete(self, **kwargs):

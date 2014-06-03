@@ -215,6 +215,17 @@ class IpernityTest(TestCase):
         # doc.getVisitor
         doc.getVisitors()
 
+        # doc.setLisence
+        doc.setLicense(license=11)
+
+        # doc.setGeo
+        doc.setGeo(lng=43, lat=78.99)
+
+        # doc.set
+        doc.set(title='new title', description='new desc')
+        self.assertEquals(doc.title, 'new title')
+        self.assertEquals(doc.description, 'new desc')
+
     def test_Tag(self):
         doc = self.docs[0]
         # add
