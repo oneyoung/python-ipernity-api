@@ -203,6 +203,12 @@ class IpernityTest(TestCase):
             self.assertTrue(all([isinstance(t, ipernity.Thumb)
                                  for t in ret['thumbs']]))
 
+        # doc.getPerms
+        ret = doc.getPerms()
+        self.assertIsInstance(ret['visibility']['ispublic'], int)
+        self.assertIsInstance(ret['permissions']['comment'], int)
+        self.assertIsInstance(ret['can']['fave'], bool)
+
     def test_Tag(self):
         doc = self.docs[0]
         # add

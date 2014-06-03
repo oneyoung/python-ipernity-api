@@ -573,6 +573,16 @@ class Doc(IpernityObject):
             }
         return kwargs, format_result
 
+    @call('doc.getPerms')
+    def getPerms(self, **kwargs):
+        def format_result(resp):
+            return {
+                'visibility': _dict_str2int(resp['visibility']),
+                'permissions': _dict_str2int(resp['permissions']),
+                'can': _dict_conv(_str2bool)(resp['can']),
+            }
+        return kwargs, format_result
+
     @call('doc.delete')
     def delete(self, **kwargs):
         return kwargs, _none
