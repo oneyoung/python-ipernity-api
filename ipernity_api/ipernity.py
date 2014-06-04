@@ -610,6 +610,24 @@ class Doc(IpernityObject):
     def delete(self, **kwargs):
         return kwargs, _none
 
+    @static_call('doc.search')
+    def search(**kwargs):
+        for k in ['user', 'album', 'group']:
+            kwargs = _convert_iobj(kwargs, k)
+        if 'tags' in kwargs:
+            tags = kwargs.pop('tags')
+            if isinstance(tags, list):
+                tags = ','.join([t.id if isinstance(t, Tag) else t
+                                 for t in tags])
+            kwargs['tags'] = tags
+        tformat = '%Y-%m-%d %H:%M:%S'
+        for k in ['created_min', 'created_max']:
+            if k in kwargs:
+                date = kwargs[k]
+                kwargs[k] = (date.strftime(tformat)
+                             if isinstance(date, datetime.datetime) else date)
+        return kwargs, _format_result_docs
+
     # comments
     def comments_add(self, **kwargs):
         return Comment.add(doc=self, **kwargs)

@@ -226,6 +226,13 @@ class IpernityTest(TestCase):
         self.assertEquals(doc.title, 'new title')
         self.assertEquals(doc.description, 'new desc')
 
+        # doc.search
+        ret = ipernity.Doc.search(user=self.user, tags=[])
+        self.assertTrue(all([isinstance(d, ipernity.Doc) for d in ret]))
+        ret = ipernity.Doc.search(user=self.user,
+                                  created_max=datetime.datetime.now())
+        self.assertTrue(all([isinstance(d, ipernity.Doc) for d in ret]))
+
     def test_Tag(self):
         doc = self.docs[0]
         # add
