@@ -338,6 +338,10 @@ class Album(IpernityObject):
             kwargs['album_ids'] = albums
         return kwargs, _none
 
+    @call('album.setPerms')
+    def setPerms(self, **kwargs):
+        return kwargs, _none
+
     @call('album.docs.add')
     def docs_add(self, **kwargs):
         def format_result(resp):

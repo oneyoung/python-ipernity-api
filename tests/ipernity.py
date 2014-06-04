@@ -69,6 +69,9 @@ class IpernityTest(TestCase):
         albums.reverse()
         ipernity.Album.orderList(albums=albums)
 
+        # setPerms
+        album.setPerms(perm_comment=5)
+
         # add doc
         ret = album.docs_add(doc=doc1)
         # check result
