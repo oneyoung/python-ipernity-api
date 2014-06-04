@@ -61,6 +61,7 @@ class IpernityTest(TestCase):
 
         # add doc
         ret = album.docs_add(doc=doc1)
+        print ret
         # check result
         self.assertEqual(ret.info['total'], 1)
         self.assertIsInstance(ret[0]['added'], bool)
@@ -69,6 +70,13 @@ class IpernityTest(TestCase):
         self.assertTrue(any([a.id == album.id for a in ret['albums']]))
         # add docs
         album.docs_add(docs=[doc1, doc2])
+
+        # docs_setList
+        ret = album.docs_setList(docs=[doc2, doc1], cover=doc2)
+        self.assertEquals(ret.info['cover'].id, doc2.id)
+        self.assertIsInstance(ret.info['total'], int)
+        print ret, doc1.id
+        self.assertTrue(any([doc1.id == d['doc'].id for d in ret]))
 
         # docs_getContext
         ret = album.docs_getContext(doc=doc1)
@@ -90,6 +98,10 @@ class IpernityTest(TestCase):
 
         # setPerms
         album.setPerms(perm_comment=5)
+
+        # docs_getList
+        ret = album.docs_getList()
+        self.assertTrue(any([d.id == doc1.id for d in ret]))
 
         # Faves Test for Album
         Faves = ipernity.Faves
@@ -132,6 +144,15 @@ class IpernityTest(TestCase):
         album_id = album.id
         # new album can be get
         album = ipernity.Album.get(id=album_id)
+
+        # docs_remove
+        ret = album.docs_remove(docs=[doc1])
+        self.assertIsInstance(ret.info['total'], int)
+        self.assertIsInstance(ret[0]['removed'], bool)
+        self.assertTrue(any([doc1.id == d['doc'].id for d in ret]))
+
+        # delete album
+        # it's wired, once albums has not docs, album delete would not found
         album.delete()
         # after delete, album shoult not found
         with self.assertRaisesRegexp(errors.IpernityAPIError,

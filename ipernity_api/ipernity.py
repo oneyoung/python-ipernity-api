@@ -323,8 +323,7 @@ class Album(IpernityObject):
     @static_call('album.getList')
     def getList(**kwargs):
         kwargs = _convert_iobj(kwargs, 'user')
-        return kwargs, _resp2ilist('album', _dict_str2int,
-                                   lambda d: Album(**d))
+        return kwargs, _format_result_albums
 
     @call('album.getVisitors')
     def getVisitors(self, **kwargs):
@@ -342,17 +341,43 @@ class Album(IpernityObject):
     def setPerms(self, **kwargs):
         return kwargs, _none
 
-    @call('album.docs.add')
-    def docs_add(self, **kwargs):
-        def format_result(resp):
-            info = resp['album']
-            info.pop('album_id', None)
-            info = _dict_str2int(info, False)
+    @staticmethod
+    def _format_result_docs_add(resp):
+        def conv_doc(d):
             mapping = [
                 ('added', _str2bool),
                 ('error', _str2bool),
             ]
-            docs = [_dict_mapping(d, mapping) for d in info.pop('doc', [])]
+            d = _dict_mapping(d, mapping)
+            d['doc'] = Doc(id=d.pop('doc_id'))
+            return d
+        info = resp['album']
+        info.pop('album_id', None)
+        coverid = info.pop('cover_id', None)
+        if coverid:
+            info['cover'] = Doc(id=coverid)
+        info = _dict_str2int(info, False)
+        docs = [conv_doc(d) for d in info.pop('doc', [])]
+        return IpernityList(docs, info=info)
+
+    @call('album.docs.add')
+    def docs_add(self, **kwargs):
+        def format_result(resp):
+            def conv_doc(d):
+                mapping = [
+                    ('added', _str2bool),
+                    ('error', _str2bool),
+                ]
+                d = _dict_mapping(d, mapping)
+                d['doc'] = Doc(id=d.pop('doc_id'))
+                return d
+            info = resp['album']
+            info.pop('album_id', None)
+            coverid = info.pop('cover_id', None)
+            if coverid:
+                info['cover'] = Doc(id=coverid)
+            info = _dict_str2int(info, False)
+            docs = [conv_doc(d) for d in info.pop('doc', [])]
             return IpernityList(docs, info=info)
 
         try:
@@ -380,6 +405,56 @@ class Album(IpernityObject):
                                     lambda d: Doc(**d), sec='next')(resp),
             }
         kwargs = _convert_iobj(kwargs, 'doc')
+        return kwargs, format_result
+
+    @call('album.docs.getList')
+    def docs_getList(self, **kwargs):
+        return kwargs, lambda r: _format_result_docs(r['album'])
+
+    @call('album.docs.remove')
+    def docs_remove(self, **kwargs):
+        def format_result(resp):
+            def conv_doc(d):
+                docid = d.pop('doc_id')
+                d['doc'] = Doc(id=docid)
+                d['removed'] = _str2bool(d['removed'])
+                return d
+            info = resp['album']
+            info.pop('album_id', None)
+            docs = [conv_doc(d) for d in info.pop('doc', [])]
+            info = _dict_str2int(info)
+            return IpernityList(docs, info)
+        if 'docs' in kwargs:
+            docs = ','.join([d.id if isinstance(d, Doc) else d
+                             for d in kwargs.pop('docs', [])])
+            kwargs['doc_id'] = docs
+        return kwargs, format_result
+
+    @call('album.docs.setList')
+    def docs_setList(self, **kwargs):
+        def format_result(resp):
+            def conv_doc(d):
+                mapping = [
+                    ('added', _str2bool),
+                    ('error', _str2bool),
+                ]
+                d = _dict_mapping(d, mapping)
+                d['doc'] = Doc(id=d.pop('doc_id'))
+                return d
+            info = resp['album']
+            info.pop('album_id', None)
+            coverid = info.pop('cover_id', None)
+            if coverid:
+                info['cover'] = Doc(id=coverid)
+            info = _dict_str2int(info, False)
+            docs = [conv_doc(d) for d in info.pop('docs', [])]
+            return IpernityList(docs, info=info)
+
+        kwargs = _convert_iobj(kwargs, 'cover')
+        if 'docs' in kwargs:
+            docs = ','.join([d.id if isinstance(d, Doc) else d
+                             for d in kwargs.pop('docs', [])])
+            kwargs['doc_ids'] = docs
         return kwargs, format_result
 
 
@@ -556,7 +631,6 @@ class Doc(IpernityObject):
     @call('doc.getContainers')
     def getContainers(self, **kwargs):
         def format_result(resp):
-            print resp
             return {
                 'albums': _format_result_albums(resp)
                 if 'albums' in resp else [],
