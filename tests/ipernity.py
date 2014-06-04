@@ -59,6 +59,25 @@ class IpernityTest(TestCase):
         self.assertIsInstance(album.cover, ipernity.Doc)
         self.assertEquals(doc1.id, album.cover.id)
 
+        # add doc
+        ret = album.docs_add(doc=doc1)
+        # check result
+        self.assertEqual(ret.info['total'], 1)
+        self.assertIsInstance(ret[0]['added'], bool)
+        # doc.getContainers
+        ret = doc1.getContainers()
+        self.assertTrue(any([a.id == album.id for a in ret['albums']]))
+        # add docs
+        album.docs_add(docs=[doc1, doc2])
+
+        # docs_getContext
+        ret = album.docs_getContext(doc=doc1)
+        self.assertEquals(ret['doc'].id, album.id)
+        self.assertTrue(all([isinstance(d, ipernity.Doc)
+                             for d in ret['prev']]))
+        self.assertTrue(all([isinstance(d, ipernity.Doc)
+                             for d in ret['next']]))
+
         # getList test
         ret = ipernity.Album.getList(user=self.user)
         self.assertTrue(ret.info['total'] > 0)
@@ -71,17 +90,6 @@ class IpernityTest(TestCase):
 
         # setPerms
         album.setPerms(perm_comment=5)
-
-        # add doc
-        ret = album.docs_add(doc=doc1)
-        # check result
-        self.assertEqual(ret.info['total'], 1)
-        self.assertIsInstance(ret[0]['added'], bool)
-        # doc.getContainers
-        ret = doc1.getContainers()
-        self.assertTrue(any([a.id == album.id for a in ret['albums']]))
-        # add docs
-        album.docs_add(docs=[doc1, doc2])
 
         # Faves Test for Album
         Faves = ipernity.Faves

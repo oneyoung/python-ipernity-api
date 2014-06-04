@@ -369,6 +369,19 @@ class Album(IpernityObject):
 
         return kwargs, format_result
 
+    @call('album.docs.getContext')
+    def docs_getContext(self, **kwargs):
+        def format_result(resp):
+            return {
+                'doc': Album(**resp['album']),
+                'prev': _resp2ilist('doc', _dict_str2int,
+                                    lambda d: Doc(**d), sec='prev')(resp),
+                'next': _resp2ilist('doc', _dict_str2int,
+                                    lambda d: Doc(**d), sec='next')(resp),
+            }
+        kwargs = _convert_iobj(kwargs, 'doc')
+        return kwargs, format_result
+
 
 class Folder(IpernityObject):
     __id__ = 'folder_id'
