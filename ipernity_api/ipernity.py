@@ -301,17 +301,6 @@ class Album(IpernityObject):
         kwargs = _convert_iobj(kwargs, 'cover')
         return kwargs, lambda r: Album(**r['album'])
 
-    @static_call('album.get')
-    def get(**kwargs):
-        kwargs = _replaceid(kwargs, Album.__id__)
-        return kwargs, lambda r: Album(**r['album'])
-
-    @static_call('album.getList')
-    def getList(**kwargs):
-        kwargs = _convert_iobj(kwargs, 'user')
-        return kwargs, _resp2ilist('album', _dict_str2int,
-                                   lambda d: Album(**d))
-
     @call('album.delete')
     def delete(self, **kwargs):
         return kwargs, _none
@@ -322,13 +311,32 @@ class Album(IpernityObject):
         # result should update to self
         return kwargs, lambda r: self._set_props(**r['album'])
 
+    @static_call('album.get')
+    def get(**kwargs):
+        kwargs = _replaceid(kwargs, Album.__id__)
+        return kwargs, lambda r: Album(**r['album'])
+
     @call('album.getFaves')
     def getFaves(self, **kwargs):
         return kwargs, _format_result_faves
 
+    @static_call('album.getList')
+    def getList(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'user')
+        return kwargs, _resp2ilist('album', _dict_str2int,
+                                   lambda d: Album(**d))
+
     @call('album.getVisitors')
     def getVisitors(self, **kwargs):
         return kwargs, _format_result_visitors
+
+    @static_call('album.orderList')
+    def orderList(**kwargs):
+        if 'albums' in kwargs:
+            albums = ','.join([a.id if isinstance(a, Album) else a
+                               for a in kwargs.pop('albums', [])])
+            kwargs['album_ids'] = albums
+        return kwargs, _none
 
     @call('album.docs.add')
     def docs_add(self, **kwargs):

@@ -64,6 +64,11 @@ class IpernityTest(TestCase):
         self.assertTrue(ret.info['total'] > 0)
         self.assertTrue(any([a.id == album.id for a in ret]))
 
+        # orderList
+        albums = ret.data
+        albums.reverse()
+        ipernity.Album.orderList(albums=albums)
+
         # add doc
         ret = album.docs_add(doc=doc1)
         # check result
