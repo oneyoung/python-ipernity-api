@@ -10,6 +10,8 @@ def getfile(fname):
 
 
 class IpernityTest(TestCase):
+    # TODO: has no way to test Post
+
     def __init__(self, *arg, **kwargs):
         TestCase.__init__(self, *arg, **kwargs)
         utils.auto_auth()

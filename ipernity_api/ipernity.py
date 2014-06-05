@@ -1053,3 +1053,15 @@ class Explore(IpernityObject):
     @static_call('explore.groups.getRandom')
     def groups_getRandom(**kwargs):
         return kwargs, _format_result_groups
+
+
+class Post(IpernityObject):
+    __id__ = 'post_id'
+
+    @call('post.getFaves')
+    def getFaves(self, **kwargs):
+        return kwargs, _format_result_faves
+
+    @call('post.getVisitors')
+    def getVisitors(self, **kwargs):
+        return kwargs, _format_result_visitors
