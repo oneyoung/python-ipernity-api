@@ -158,12 +158,22 @@ class IpernityTest(TestCase):
             ipernity.Album.get(id=album_id)
 
     def test_Folder(self):
-        # a1 = ipernity.Album.create(title='album1')
-        # a2 = ipernity.Album.create(title='album2')
         folder = ipernity.Folder.create(title='folder title')
         # fields type validation
         self.assertIsInstance(folder.count['albums'], int)
         self.assertIsInstance(folder.dates['created_at'], datetime.datetime)
+
+        # albums_add
+        a1 = ipernity.Album.create(title='album1')
+        a1.docs_add(docs=self.docs)
+        ret = folder.albums_add(albums=[a1])
+        self.assertTrue(ret.info['total'] > 0)
+        self.assertIsInstance(ret[0]['album'], ipernity.Album)
+        self.assertIsInstance(ret[0]['added'], bool)
+
+        # albums_getList
+        ret = folder.albums_getList()
+        self.assertTrue(any([a.id == a1.id for a in ret]))
 
         # edit
         folder.edit(title='new title', description='new desc')
@@ -176,14 +186,21 @@ class IpernityTest(TestCase):
         self.assertTrue(all([isinstance(f, ipernity.Folder)
                              for f in ret]))
 
+        # orderList
+        ipernity.Folder.orderList(folders=[folder])
+
         folder_id = folder.id
         # after created, folder can retrieve by get
-        # TODO: this fail
-        # folder = ipernity.Folder.get(id=folder_id)
+        folder = ipernity.Folder.get(id=folder_id)
+
+        # Folder.albums_remove
+        folder.albums_remove(albums=[a1])
 
         folder.delete()
         with self.assertRaisesRegexp(errors.IpernityAPIError, 'not found'):
             ipernity.Folder.get(id=folder_id)
+
+        a1.delete()
 
     def test_Upload(self):
         ticket = ipernity.Upload.file(file=getfile('1.jpg'))

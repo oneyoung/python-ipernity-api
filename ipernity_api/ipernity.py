@@ -464,6 +464,9 @@ class Album(IpernityObject):
 
 
 class Folder(IpernityObject):
+    ''' Note: For empty Folder or Folder has only empty albums
+    ipernity.com might complant "Folder not Found".
+    '''
     __id__ = 'folder_id'
     __display__ = ['id', 'title']
     __convertors__ = [
@@ -493,6 +496,46 @@ class Folder(IpernityObject):
     def getList(**kwargs):
         kwargs = _convert_iobj(kwargs, 'user')
         return kwargs, _format_result_folders
+
+    @static_call('folder.orderList')
+    def orderList(**kwargs):
+        if 'folders' in kwargs:
+            folders = ','.join([f.id if isinstance(f, Folder) else f
+                                for f in kwargs.pop('folders', [])])
+            kwargs['folder_ids'] = folders
+        return kwargs, _none
+
+    def _albums_add_remove(self, **kwargs):
+        def format_result(resp):
+            def conv_album(a):
+                a['album'] = Album(id=a.pop('album_id'))
+                for k in ['added', 'removed']:
+                    if k in a:
+                        a[k] = _str2bool(a[k])
+                return a
+            info = resp['folder']
+            info.pop('folder_id', None)
+            albums = [conv_album(a) for a in info.pop('album', [])]
+            info = _dict_str2int(info)
+            return IpernityList(albums, info)
+
+        if 'albums' in kwargs:
+            albums = ','.join([a.id if isinstance(a, Album) else a
+                               for a in kwargs.pop('albums', [])])
+            kwargs['album_id'] = albums
+        return kwargs, format_result
+
+    @call('folder.albums.add')
+    def albums_add(self, **kwargs):
+        return self._albums_add_remove(**kwargs)
+
+    @call('folder.albums.getList')
+    def albums_getList(self, **kwargs):
+        return kwargs, lambda r: _format_result_albums(r['folder'])
+
+    @call('folder.albums.remove')
+    def albums_remove(self, **kwargs):
+        return self._albums_add_remove(**kwargs)
 
 
 class Upload(IpernityObject):
