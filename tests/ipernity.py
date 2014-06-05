@@ -171,7 +171,7 @@ class IpernityTest(TestCase):
         self.assertEquals(folder.description, 'new desc')
 
         # getList, userd by user.getFolders
-        ret = self.user.getFolders(empty=1)
+        ret = self.user.getFolders(empty=True)
         self.assertTrue(ret.info['total'] > 0)
         self.assertTrue(all([isinstance(f, ipernity.Folder)
                              for f in ret]))

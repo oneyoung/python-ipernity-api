@@ -8,6 +8,13 @@ from .multipart import posturl
 from . import keys
 
 
+def _clean_params(params):
+    for k, v in params.items():
+        if isinstance(v, bool):
+            params[k] = 1 if v else 0
+    return params
+
+
 def call_api(api_method, api_key=None, api_secret=None, signed=False,
              authed=False, http_post=True, auth_handler=None, **kwargs):
     ''' file request to ipernity API
@@ -32,6 +39,7 @@ def call_api(api_method, api_key=None, api_secret=None, signed=False,
     if not api_key or not api_secret:
         raise IpernityError('No Ipernity API keys been set')
     kwargs['api_key'] = api_key
+    kwargs = _clean_params(kwargs)
 
     url = "http://api.ipernity.com/api/%s/%s" % (api_method, 'json')
 
