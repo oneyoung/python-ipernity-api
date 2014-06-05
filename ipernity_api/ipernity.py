@@ -145,6 +145,22 @@ def _convert_iobj(kwargs, src, dst=None):
     return kwargs
 
 
+def _conv_you(you):
+    mapping = [
+        ('isfave', _str2bool),
+        ('visits', int),
+        ('last_visit', _ts2datetime),
+        # you in group.get
+        ('joined_at', _ts2datetime),
+        ('visited_at', _ts2datetime),
+        ('isadmin', _str2bool),
+        ('ismoderator', _str2bool),
+        ('ismember', _str2bool),
+        ('docs', int),
+    ]
+    return _dict_mapping(you, mapping)
+
+
 def _dict_mapping(d, mapping):
     for k, func in mapping:
         if k in d:
@@ -229,67 +245,11 @@ def _format_result_visitors(resp):
     return IpernityList(visits, info)
 
 
-class Test(IpernityObject):
-    @static_call('test.echo')
-    def echo(**kwargs):
-        return kwargs, _extract('echo')
-
-    @static_call('test.hello')
-    def hello(**kwargs):
-        return kwargs, _extract('hello')
-
-
-class User(IpernityObject):
-    __id__ = 'user_id'
-    __display__ = ['id', 'username']
-    __convertors__ = [
-        (['is_pro', 'is_online', 'is_closed'], _str2bool),
-        (['count'], _dict_conv(int)),
-        (['dates'], _dict_conv(_ts2datetime)),
-    ]
-
-    @static_call('user.get')
-    def get(**kwargs):
-        kwargs = _replaceid(kwargs, User.__id__)
-        return kwargs, lambda r: User(**r['user'])
-
-    def getAlbums(self, **kwargs):
-        return Album.getList(user=self, **kwargs)
-
-    def getDocs(self, **kwargs):
-        return Doc.getList(user=self, **kwargs)
-
-    def getFolders(self, **kwargs):
-        return Folder.getList(user=self, **kwargs)
-
-    def getGroups(self, **kwargs):
-        return Group.getList(user=self, **kwargs)
-
-    def getNetworks(self, **kwargs):
-        return Network.getList(user=self, **kwargs)
-
-    def getPopularTags(self, type='keyword', **kwargs):
-        return Tag.user_getPopular(user=self, type=type, **kwargs)
-
-    @static_call('account.getQuota')
-    def getQuota(**kwargs):
-        return kwargs, lambda r: Quota(**r['quota'])
-
-    def getTags(self, type='keyword', **kwargs):
-        return Tag.user_getList(user=self, type=type, **kwargs)
-
-
 class Quota(IpernityObject):
     __convertors__ = [
         (['is_pro'], _str2bool),
         (['upload'], _dict_str2int),
     ]
-
-
-class Auth(IpernityObject):
-    @static_call('auth.checkToken')
-    def get(**kwargs):
-        return kwargs, lambda r: Auth(**r['auth'])
 
 
 class Album(IpernityObject):
@@ -345,25 +305,6 @@ class Album(IpernityObject):
     @call('album.setPerms')
     def setPerms(self, **kwargs):
         return kwargs, _none
-
-    @staticmethod
-    def _format_result_docs_add(resp):
-        def conv_doc(d):
-            mapping = [
-                ('added', _str2bool),
-                ('error', _str2bool),
-            ]
-            d = _dict_mapping(d, mapping)
-            d['doc'] = Doc(id=d.pop('doc_id'))
-            return d
-        info = resp['album']
-        info.pop('album_id', None)
-        coverid = info.pop('cover_id', None)
-        if coverid:
-            info['cover'] = Doc(id=coverid)
-        info = _dict_str2int(info, False)
-        docs = [conv_doc(d) for d in info.pop('doc', [])]
-        return IpernityList(docs, info=info)
 
     @call('album.docs.add')
     def docs_add(self, **kwargs):
@@ -463,6 +404,310 @@ class Album(IpernityObject):
         return kwargs, format_result
 
 
+class Auth(IpernityObject):
+    @static_call('auth.checkToken')
+    def get(**kwargs):
+        return kwargs, lambda r: Auth(**r['auth'])
+
+
+class Comment(IpernityObject):
+    __id__ = 'comment_id'
+    __convertors__ = [
+        (['posted_at'], _ts2datetime),
+        (['candelete', 'canedit', 'canreply'], _str2bool),
+    ]
+    __replace__ = [
+        ('parent_id', 'parent', lambda cid: Comment(id=cid)),
+        ('user_id', 'user', lambda uid: User(id=uid)),
+    ]
+
+    @static_call('doc.comments.add')
+    def add(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'doc')
+        return kwargs, lambda r: Comment(**r['comment'])
+
+    @call('doc.comments.delete')
+    def delete(self, **kwargs):
+        return kwargs, _none
+
+    @call('doc.comments.edit')
+    def edit(self, **kwargs):
+        return kwargs, lambda r: self._set_props(**r['comment'])
+
+    @call('doc.comments.get')
+    def get(self, **kwargs):
+        return kwargs, lambda r: Comment(**r['comment'])
+
+    @call('doc.comments.reply')
+    def reply(self, **kwargs):
+        return kwargs, lambda r: Comment(**r['comment'])
+
+    @static_call('doc.comments.getList')
+    def getList(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'doc')
+        return kwargs, _resp2ilist('comment', _dict_str2int,
+                                   lambda c: Comment(**c))
+
+
+class Doc(IpernityObject):
+    __id__ = 'doc_id'
+    __display__ = ['id', 'title']
+    __convertors__ = [
+        (['w', 'h', 'lehgth', 'bytes', 'index'], int),
+        (['dates'], _dict_conv(_ts2datetime)),
+        (['count', 'visibility', 'permissions'], _dict_conv(int)),
+        (['can'], _dict_conv(_str2bool)),
+        (['you'], _conv_you),
+        (['owner'], lambda r: User(**r)),
+        (['thumbs'], lambda tbs: [Thumb(**tb) for tb in tbs['thumb']]),
+        (['medias'], lambda mds: [Media(**md) for md in mds['media']]),
+        (['original'], lambda o: Original(**o)),
+    ]
+
+    @static_call('doc.checkMD5')
+    def checkMD5(**kwargs):
+        # This method will work someday... (ask us about if you need it)
+        def format_result(resp):
+            def conv_doc(d):
+                found = _str2bool(int(d['found']))
+                d['found'] = found
+                if found:
+                    doc = Doc(id=d.pop('doc_id'))
+                    d['doc'] = doc
+                return d
+
+            info = resp['docs']
+            docs = [conv_doc(d) for d in info.pop('doc', [])]
+            info = _dict_str2int(info)
+            return IpernityList(docs, info)
+
+        if 'md5s' in kwargs:
+            md5s = ','.join(kwargs.pop('md5s', []))
+            kwargs['md5'] = md5s
+        return kwargs, format_result
+
+    @call('doc.delete')
+    def delete(self, **kwargs):
+        return kwargs, _none
+
+    @static_call('doc.get')
+    def get(**kwargs):
+        kwargs = _replaceid(kwargs, Doc.__id__)
+        return kwargs, lambda r: Doc(**r['doc'])
+
+    @call('doc.getContainers')
+    def getContainers(self, **kwargs):
+        def format_result(resp):
+            return {
+                'albums': _format_result_albums(resp)
+                if 'albums' in resp else [],
+                'groups': _format_result_groups(resp)
+                if 'groups' in resp else [],
+            }
+
+        return kwargs, format_result
+
+    @call('doc.getContext')
+    def getContext(self, **kwargs):
+        def format_result(resp):
+            return {
+                'doc': Doc(**resp['doc']),
+                'prev': _resp2ilist('doc', _dict_str2int,
+                                    lambda d: Doc(**d), sec='prev')(resp),
+                'next': _resp2ilist('doc', _dict_str2int,
+                                    lambda d: Doc(**d), sec='next')(resp),
+            }
+        return kwargs, format_result
+
+    @call('doc.getFaves')
+    def getFaves(self, **kwargs):
+        kwargs = _convert_iobj(kwargs, 'doc')
+        return kwargs, _format_result_faves
+
+    @static_call('doc.getList')
+    def getList(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'user', 'user_id')
+        return kwargs, _format_result_docs
+
+    @call('doc.getMedias')
+    def getMedias(self, **kwargs):
+        def format_result(resp):
+            return {
+                'thumbs': [Thumb(**t)
+                           for t in resp['thumbs'].pop('thumb', [])]
+                if 'thumbs' in resp else [],
+                'medias': [Media(**m)
+                           for m in resp['medias'].pop('media', [])]
+                if 'medias' in resp else [],
+                'players': [Player(**p)
+                            for p in resp['players'].pop('player', [])]
+                if 'players'in resp else [],
+                'original': Original(**resp['original'])
+                if 'original' in resp else None
+            }
+        return kwargs, format_result
+
+    @call('doc.getPerms')
+    def getPerms(self, **kwargs):
+        def format_result(resp):
+            return {
+                'visibility': _dict_str2int(resp['visibility']),
+                'permissions': _dict_str2int(resp['permissions']),
+                'can': _dict_conv(_str2bool)(resp['can']),
+            }
+        return kwargs, format_result
+
+    @call('doc.getVisitors')
+    def getVisitors(self, **kwargs):
+        return kwargs, _format_result_visitors
+
+    @static_call('doc.search')
+    def search(**kwargs):
+        for k in ['user', 'album', 'group']:
+            kwargs = _convert_iobj(kwargs, k)
+        if 'tags' in kwargs:
+            tags = kwargs.pop('tags')
+            if isinstance(tags, list):
+                tags = ','.join([t.id if isinstance(t, Tag) else t
+                                 for t in tags])
+            kwargs['tags'] = tags
+        tformat = '%Y-%m-%d %H:%M:%S'
+        for k in ['created_min', 'created_max']:
+            if k in kwargs:
+                date = kwargs[k]
+                kwargs[k] = (date.strftime(tformat)
+                             if isinstance(date, datetime.datetime) else date)
+        return kwargs, _format_result_docs
+
+    @call('doc.set')
+    def set(self, **kwargs):
+        return kwargs, lambda r: self._set_props(**r['doc'])
+
+    @call('doc.setGeo')
+    def setGeo(self, **kwargs):
+        return kwargs, _none
+
+    @call('doc.setLicense')
+    def setLicense(self, **kwargs):
+        return kwargs, _none
+
+    @call('doc.setPerms')
+    def setPerms(self, **kwargs):
+        return kwargs, _none
+
+    # comments
+    def comments_add(self, **kwargs):
+        return Comment.add(doc=self, **kwargs)
+
+    def comments_getList(self, **kwargs):
+        return Comment.getList(doc=self, **kwargs)
+
+    # notes
+    @call('doc.notes.add')
+    def notes_add(self, **kwargs):
+        kwargs = _convert_iobj(kwargs, 'member')
+        return kwargs, lambda r: Note(**r['note'])
+
+    # tags handling
+    @call('doc.tags.add')
+    def tags_add(self, **kwargs):
+        kwargs = _dict_list2str(kwargs, ['keywords', 'members'])
+        return kwargs, _format_result_tags
+
+    @call('doc.tags.edit')
+    def tags_edit(self, **kwargs):
+        kwargs = _dict_list2str(kwargs, ['keywords', 'members'])
+        return kwargs, _format_result_tags
+
+    @call('doc.tags.getList')
+    def tags_getList(self, **kwargs):
+        return kwargs, _format_result_tags
+
+    @call('doc.tags.remove')
+    def tags_remove(self, **kwargs):
+        if 'tag' in kwargs:
+            tag = kwargs.pop('tag')
+            if not isinstance(tag, Tag):
+                raise IpernityError('Invalid tag')
+            kwargs['id'] = tag.id
+        return kwargs, _none
+
+
+class Explore(IpernityObject):
+    @static_call('explore.docs.getPopular')
+    def docs_getPopular(**kwargs):
+        return kwargs, _format_result_docs
+
+    @static_call('explore.docs.getRecent')
+    def docs_getRecent(**kwargs):
+        return kwargs, _format_result_docs
+
+    @static_call('explore.docs.homepage')
+    def docs_homepage(**kwargs):
+        return kwargs, _format_result_docs
+
+    @static_call('explore.groups.getRandom')
+    def groups_getRandom(**kwargs):
+        return kwargs, _format_result_groups
+
+
+class Faves(IpernityObject):
+    @static_call('faves.albums.add')
+    def albums_add(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'album')
+        return kwargs, _none
+
+    @static_call('faves.albums.getList')
+    def albums_getList(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'user')
+        kwargs = _convert_iobj(kwargs, 'owner')
+        return kwargs, _format_result_albums
+
+    @static_call('faves.albums.remove')
+    def albums_remove(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'album')
+        return kwargs, _none
+
+    @static_call('faves.docs.add')
+    def docs_add(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'doc')
+        return kwargs, _none
+
+    @static_call('faves.docs.getList')
+    def docs_getList(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'user')
+        kwargs = _convert_iobj(kwargs, 'owner')
+        return kwargs, _format_result_docs
+
+    @static_call('faves.docs.remove')
+    def docs_remove(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'doc')
+        return kwargs, _none
+
+
+class File(IpernityObject):
+    __display__ = ['label', 'url']
+    __convertors__ = [
+        (['w', 'h', 'lehgth', 'bytes'], int),
+    ]
+
+
+class Thumb(File):
+    pass
+
+
+class Media(File):
+    pass
+
+
+class Original(File):
+    pass
+
+
+class Player(File):
+    pass
+
+
 class Folder(IpernityObject):
     ''' Note: For empty Folder or Folder has only empty albums
     ipernity.com might complant "Folder not Found".
@@ -538,20 +783,167 @@ class Folder(IpernityObject):
         return self._albums_add_remove(**kwargs)
 
 
-class Upload(IpernityObject):
-    @static_call('upload.file')
-    def file(**kwargs):
-        return kwargs, lambda r: Ticket(id=r['ticket'])
+class Group(IpernityObject):
+    __id__ = 'group_id'
+    __display__ = ['id', 'title']
+    __convertors__ = [
+        (['can', 'visibility'], _dict_conv(_str2bool)),
+        (['quota', 'count'], _dict_str2int),
+        (['dates'], _dict_conv(_ts2datetime)),
+        (['you'], _conv_you),
+    ]
 
-    @static_call('upload.checkTickets')
-    def checkTickets(**kwargs):
-        if 'tickets' not in kwargs:
-            raise IpernityError('No tickets provided')
-        tickets = kwargs.pop('tickets')
-        kwargs['tickets'] = ','.join([t.id if isinstance(t, Ticket) else t
-                                      for t in tickets])
-        return kwargs, _resp2ilist('ticket', _dict_str2int,
-                                   lambda d: Ticket(**d))
+    @call('group.get')
+    def get(self, **kwargs):
+        return kwargs, lambda r: Group(**r['group'])
+
+    @static_call('group.getList')
+    def getList(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'user')
+        return kwargs, _format_result_groups
+
+    @static_call('group.search')
+    def search(**kwargs):
+        return kwargs, _format_result_groups
+
+    @call('group.get')
+    def update(self, **kwargs):
+        return kwargs, lambda r: self._set_props(**r['group'])
+
+    def _docs_add_remove(self, **kwargs):
+        def format_result(resp):
+            def format_doc(doc):
+                doc['doc'] = Doc(id=doc.pop('doc_id'))
+                for k in ['added', 'pending', 'error', 'removed']:
+                    if k in doc:
+                        doc[k] = _str2bool(doc[k])
+                return doc
+
+            info = resp['group']
+            info.pop('group_id', None)
+            docs = [format_doc(doc) for doc in info.pop('doc', [])]
+            info = _dict_str2int(info)
+            return IpernityList(docs, info)
+
+        if 'docs' in kwargs:
+            docs = ','.join([d.id if isinstance(d, Doc) else d
+                             for d in kwargs.pop('docs')])
+            kwargs['doc_id'] = docs
+        return kwargs, format_result
+
+    @call('group.docs.add')
+    def docs_add(self, **kwargs):
+        return self._docs_add_remove(**kwargs)
+
+    @call('group.docs.getContext')
+    def docs_getContext(self, **kwargs):
+        def format_result(resp):
+            info = resp
+            return {
+                'doc': Doc(**info['doc']),
+                'prev': _resp2ilist('doc', _dict_str2int,
+                                    lambda d: Doc(**d), sec='prev')(info),
+                'next': _resp2ilist('doc', _dict_str2int,
+                                    lambda d: Doc(**d), sec='next')(info),
+                'total': int(info['group']['total']),
+            }
+        kwargs = _convert_iobj(kwargs, 'doc')
+        kwargs = _convert_iobj(kwargs, 'user')
+        return kwargs, format_result
+
+    @call('group.docs.getList')
+    def docs_getList(self, **kwargs):
+        kwargs = _convert_iobj(kwargs, 'user')
+        return kwargs, lambda r: _format_result_docs(r['group'])
+
+    @call('group.docs.remove')
+    def docs_remove(self, **kwargs):
+        return self._docs_add_remove(**kwargs)
+
+
+class Network(IpernityObject):
+    @static_call('network.autocomplete')
+    def autocomplete(**kwargs):
+        return kwargs, _format_result_network
+
+    @static_call('network.getList')
+    def getList(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'user')
+        return kwargs, _format_result_network
+
+    @static_call('network.docs.getRecent')
+    def docs_getRecent(**kwargs):
+        return kwargs, _format_result_docs
+
+
+class Post(IpernityObject):
+    __id__ = 'post_id'
+
+    @call('post.getFaves')
+    def getFaves(self, **kwargs):
+        return kwargs, _format_result_faves
+
+    @call('post.getVisitors')
+    def getVisitors(self, **kwargs):
+        return kwargs, _format_result_visitors
+
+
+class Note(IpernityObject):
+    __id__ = 'note_id'
+    __convertors__ = [
+        (['x', 'y', 'w', 'h'], int),
+        (['posted_at'], _ts2datetime),
+    ]
+
+    @static_call('doc.notes.add')
+    def add(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'member')
+        kwargs = _convert_iobj(kwargs, 'doc')
+        return kwargs, lambda r: Note(**r['note'])
+
+    @call('doc.notes.delete')
+    def delete(self, **kwargs):
+        return kwargs, _none
+
+    @call('doc.notes.edit')
+    def edit(self, **kwargs):
+        return kwargs, lambda r: self._set_props(**r['note'])
+
+
+class Tag(IpernityObject):
+    __id__ = 'id'
+    __display__ = ['id', 'tag']
+    __convertors__ = [
+        (['added_at'], _ts2datetime),
+    ]
+    __replace__ = [
+        ('user_id', 'user', lambda uid: User(id=uid)),
+    ]
+
+    @static_call('tags.user.getList')
+    def user_getList(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'user')
+        return kwargs, _format_result_tags
+
+    @static_call('tags.user.getPopular')
+    def user_getPopular(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'user')
+        return kwargs, _format_result_tags
+
+    @call('tags.docs.getList')
+    def docs_getList(self, **kwargs):
+        kwargs = _convert_iobj(kwargs, 'user')
+        return kwargs, _format_result_docs
+
+
+class Test(IpernityObject):
+    @static_call('test.echo')
+    def echo(**kwargs):
+        return kwargs, _extract('echo')
+
+    @static_call('test.hello')
+    def hello(**kwargs):
+        return kwargs, _extract('hello')
 
 
 class Ticket(IpernityObject):
@@ -600,468 +992,57 @@ class Ticket(IpernityObject):
         return Doc.get(id=doc_id)
 
 
-def _conv_you(you):
-    mapping = [
-        ('isfave', _str2bool),
-        ('visits', int),
-        ('last_visit', _ts2datetime),
-        # you in group.get
-        ('joined_at', _ts2datetime),
-        ('visited_at', _ts2datetime),
-        ('isadmin', _str2bool),
-        ('ismoderator', _str2bool),
-        ('ismember', _str2bool),
-        ('docs', int),
-    ]
-    return _dict_mapping(you, mapping)
+class Upload(IpernityObject):
+    @static_call('upload.file')
+    def file(**kwargs):
+        return kwargs, lambda r: Ticket(id=r['ticket'])
+
+    @static_call('upload.checkTickets')
+    def checkTickets(**kwargs):
+        if 'tickets' not in kwargs:
+            raise IpernityError('No tickets provided')
+        tickets = kwargs.pop('tickets')
+        kwargs['tickets'] = ','.join([t.id if isinstance(t, Ticket) else t
+                                      for t in tickets])
+        return kwargs, _resp2ilist('ticket', _dict_str2int,
+                                   lambda d: Ticket(**d))
 
 
-class File(IpernityObject):
-    __display__ = ['label', 'url']
+class User(IpernityObject):
+    __id__ = 'user_id'
+    __display__ = ['id', 'username']
     __convertors__ = [
-        (['w', 'h', 'lehgth', 'bytes'], int),
-    ]
-
-
-class Thumb(File):
-    pass
-
-
-class Media(File):
-    pass
-
-
-class Original(File):
-    pass
-
-
-class Player(File):
-    pass
-
-
-class Doc(IpernityObject):
-    __id__ = 'doc_id'
-    __display__ = ['id', 'title']
-    __convertors__ = [
-        (['w', 'h', 'lehgth', 'bytes', 'index'], int),
+        (['is_pro', 'is_online', 'is_closed'], _str2bool),
+        (['count'], _dict_conv(int)),
         (['dates'], _dict_conv(_ts2datetime)),
-        (['count', 'visibility', 'permissions'], _dict_conv(int)),
-        (['can'], _dict_conv(_str2bool)),
-        (['you'], _conv_you),
-        (['owner'], lambda r: User(**r)),
-        (['thumbs'], lambda tbs: [Thumb(**tb) for tb in tbs['thumb']]),
-        (['medias'], lambda mds: [Media(**md) for md in mds['media']]),
-        (['original'], lambda o: Original(**o)),
     ]
 
-    @static_call('doc.getList')
-    def getList(**kwargs):
-        kwargs = _convert_iobj(kwargs, 'user', 'user_id')
-        return kwargs, _format_result_docs
-
-    @static_call('doc.checkMD5')
-    def checkMD5(**kwargs):
-        # This method will work someday... (ask us about if you need it)
-        def format_result(resp):
-            def conv_doc(d):
-                found = _str2bool(int(d['found']))
-                d['found'] = found
-                if found:
-                    doc = Doc(id=d.pop('doc_id'))
-                    d['doc'] = doc
-                return d
-
-            info = resp['docs']
-            docs = [conv_doc(d) for d in info.pop('doc', [])]
-            info = _dict_str2int(info)
-            return IpernityList(docs, info)
-
-        if 'md5s' in kwargs:
-            md5s = ','.join(kwargs.pop('md5s', []))
-            kwargs['md5'] = md5s
-        return kwargs, format_result
-
-    @static_call('doc.get')
+    @static_call('user.get')
     def get(**kwargs):
-        kwargs = _replaceid(kwargs, Doc.__id__)
-        return kwargs, lambda r: Doc(**r['doc'])
+        kwargs = _replaceid(kwargs, User.__id__)
+        return kwargs, lambda r: User(**r['user'])
 
-    @call('doc.getContainers')
-    def getContainers(self, **kwargs):
-        def format_result(resp):
-            return {
-                'albums': _format_result_albums(resp)
-                if 'albums' in resp else [],
-                'groups': _format_result_groups(resp)
-                if 'groups' in resp else [],
-            }
+    def getAlbums(self, **kwargs):
+        return Album.getList(user=self, **kwargs)
 
-        return kwargs, format_result
+    def getDocs(self, **kwargs):
+        return Doc.getList(user=self, **kwargs)
 
-    @call('doc.getContext')
-    def getContext(self, **kwargs):
-        def format_result(resp):
-            return {
-                'doc': Doc(**resp['doc']),
-                'prev': _resp2ilist('doc', _dict_str2int,
-                                    lambda d: Doc(**d), sec='prev')(resp),
-                'next': _resp2ilist('doc', _dict_str2int,
-                                    lambda d: Doc(**d), sec='next')(resp),
-            }
-        return kwargs, format_result
+    def getFolders(self, **kwargs):
+        return Folder.getList(user=self, **kwargs)
 
-    @call('doc.getFaves')
-    def getFaves(self, **kwargs):
-        kwargs = _convert_iobj(kwargs, 'doc')
-        return kwargs, _format_result_faves
+    def getGroups(self, **kwargs):
+        return Group.getList(user=self, **kwargs)
 
-    @call('doc.getMedias')
-    def getMedias(self, **kwargs):
-        def format_result(resp):
-            return {
-                'thumbs': [Thumb(**t)
-                           for t in resp['thumbs'].pop('thumb', [])]
-                if 'thumbs' in resp else [],
-                'medias': [Media(**m)
-                           for m in resp['medias'].pop('media', [])]
-                if 'medias' in resp else [],
-                'players': [Player(**p)
-                            for p in resp['players'].pop('player', [])]
-                if 'players'in resp else [],
-                'original': Original(**resp['original'])
-                if 'original' in resp else None
-            }
-        return kwargs, format_result
+    def getNetworks(self, **kwargs):
+        return Network.getList(user=self, **kwargs)
 
-    @call('doc.getPerms')
-    def getPerms(self, **kwargs):
-        def format_result(resp):
-            return {
-                'visibility': _dict_str2int(resp['visibility']),
-                'permissions': _dict_str2int(resp['permissions']),
-                'can': _dict_conv(_str2bool)(resp['can']),
-            }
-        return kwargs, format_result
+    def getPopularTags(self, type='keyword', **kwargs):
+        return Tag.user_getPopular(user=self, type=type, **kwargs)
 
-    @call('doc.setPerms')
-    def setPerms(self, **kwargs):
-        return kwargs, _none
+    @static_call('account.getQuota')
+    def getQuota(**kwargs):
+        return kwargs, lambda r: Quota(**r['quota'])
 
-    @call('doc.setLicense')
-    def setLicense(self, **kwargs):
-        return kwargs, _none
-
-    @call('doc.setGeo')
-    def setGeo(self, **kwargs):
-        return kwargs, _none
-
-    @call('doc.getVisitors')
-    def getVisitors(self, **kwargs):
-        return kwargs, _format_result_visitors
-
-    @call('doc.set')
-    def set(self, **kwargs):
-        return kwargs, lambda r: self._set_props(**r['doc'])
-
-    @call('doc.delete')
-    def delete(self, **kwargs):
-        return kwargs, _none
-
-    @static_call('doc.search')
-    def search(**kwargs):
-        for k in ['user', 'album', 'group']:
-            kwargs = _convert_iobj(kwargs, k)
-        if 'tags' in kwargs:
-            tags = kwargs.pop('tags')
-            if isinstance(tags, list):
-                tags = ','.join([t.id if isinstance(t, Tag) else t
-                                 for t in tags])
-            kwargs['tags'] = tags
-        tformat = '%Y-%m-%d %H:%M:%S'
-        for k in ['created_min', 'created_max']:
-            if k in kwargs:
-                date = kwargs[k]
-                kwargs[k] = (date.strftime(tformat)
-                             if isinstance(date, datetime.datetime) else date)
-        return kwargs, _format_result_docs
-
-    # comments
-    def comments_add(self, **kwargs):
-        return Comment.add(doc=self, **kwargs)
-
-    def comments_getList(self, **kwargs):
-        return Comment.getList(doc=self, **kwargs)
-
-    # notes
-    @call('doc.notes.add')
-    def notes_add(self, **kwargs):
-        kwargs = _convert_iobj(kwargs, 'member')
-        return kwargs, lambda r: Note(**r['note'])
-
-    # tags handling
-    @call('doc.tags.add')
-    def tags_add(self, **kwargs):
-        kwargs = _dict_list2str(kwargs, ['keywords', 'members'])
-        return kwargs, _format_result_tags
-
-    @call('doc.tags.edit')
-    def tags_edit(self, **kwargs):
-        kwargs = _dict_list2str(kwargs, ['keywords', 'members'])
-        return kwargs, _format_result_tags
-
-    @call('doc.tags.getList')
-    def tags_getList(self, **kwargs):
-        return kwargs, _format_result_tags
-
-    @call('doc.tags.remove')
-    def tags_remove(self, **kwargs):
-        if 'tag' in kwargs:
-            tag = kwargs.pop('tag')
-            if not isinstance(tag, Tag):
-                raise IpernityError('Invalid tag')
-            kwargs['id'] = tag.id
-        return kwargs, _none
-
-
-class Faves(IpernityObject):
-    @static_call('faves.albums.add')
-    def albums_add(**kwargs):
-        kwargs = _convert_iobj(kwargs, 'album')
-        return kwargs, _none
-
-    @static_call('faves.albums.remove')
-    def albums_remove(**kwargs):
-        kwargs = _convert_iobj(kwargs, 'album')
-        return kwargs, _none
-
-    @static_call('faves.albums.getList')
-    def albums_getList(**kwargs):
-        kwargs = _convert_iobj(kwargs, 'user')
-        kwargs = _convert_iobj(kwargs, 'owner')
-        return kwargs, _format_result_albums
-
-    @static_call('faves.docs.add')
-    def docs_add(**kwargs):
-        kwargs = _convert_iobj(kwargs, 'doc')
-        return kwargs, _none
-
-    @static_call('faves.docs.remove')
-    def docs_remove(**kwargs):
-        kwargs = _convert_iobj(kwargs, 'doc')
-        return kwargs, _none
-
-    @static_call('faves.docs.getList')
-    def docs_getList(**kwargs):
-        kwargs = _convert_iobj(kwargs, 'user')
-        kwargs = _convert_iobj(kwargs, 'owner')
-        return kwargs, _format_result_docs
-
-
-class Tag(IpernityObject):
-    __id__ = 'id'
-    __display__ = ['id', 'tag']
-    __convertors__ = [
-        (['added_at'], _ts2datetime),
-    ]
-    __replace__ = [
-        ('user_id', 'user', lambda uid: User(id=uid)),
-    ]
-
-    @static_call('tags.user.getList')
-    def user_getList(**kwargs):
-        kwargs = _convert_iobj(kwargs, 'user')
-        return kwargs, _format_result_tags
-
-    @static_call('tags.user.getPopular')
-    def user_getPopular(**kwargs):
-        kwargs = _convert_iobj(kwargs, 'user')
-        return kwargs, _format_result_tags
-
-    @call('tags.docs.getList')
-    def docs_getList(self, **kwargs):
-        kwargs = _convert_iobj(kwargs, 'user')
-        return kwargs, _format_result_docs
-
-
-class Note(IpernityObject):
-    __id__ = 'note_id'
-    __convertors__ = [
-        (['x', 'y', 'w', 'h'], int),
-        (['posted_at'], _ts2datetime),
-    ]
-
-    @static_call('doc.notes.add')
-    def add(**kwargs):
-        kwargs = _convert_iobj(kwargs, 'member')
-        kwargs = _convert_iobj(kwargs, 'doc')
-        return kwargs, lambda r: Note(**r['note'])
-
-    @call('doc.notes.edit')
-    def edit(self, **kwargs):
-        return kwargs, lambda r: self._set_props(**r['note'])
-
-    @call('doc.notes.delete')
-    def delete(self, **kwargs):
-        return kwargs, _none
-
-
-class Comment(IpernityObject):
-    __id__ = 'comment_id'
-    __convertors__ = [
-        (['posted_at'], _ts2datetime),
-        (['candelete', 'canedit', 'canreply'], _str2bool),
-    ]
-    __replace__ = [
-        ('parent_id', 'parent', lambda cid: Comment(id=cid)),
-        ('user_id', 'user', lambda uid: User(id=uid)),
-    ]
-
-    @static_call('doc.comments.add')
-    def add(**kwargs):
-        kwargs = _convert_iobj(kwargs, 'doc')
-        return kwargs, lambda r: Comment(**r['comment'])
-
-    @call('doc.comments.delete')
-    def delete(self, **kwargs):
-        return kwargs, _none
-
-    @call('doc.comments.edit')
-    def edit(self, **kwargs):
-        return kwargs, lambda r: self._set_props(**r['comment'])
-
-    @call('doc.comments.get')
-    def get(self, **kwargs):
-        return kwargs, lambda r: Comment(**r['comment'])
-
-    @call('doc.comments.reply')
-    def reply(self, **kwargs):
-        return kwargs, lambda r: Comment(**r['comment'])
-
-    @static_call('doc.comments.getList')
-    def getList(**kwargs):
-        kwargs = _convert_iobj(kwargs, 'doc')
-        return kwargs, _resp2ilist('comment', _dict_str2int,
-                                   lambda c: Comment(**c))
-
-
-class Network(IpernityObject):
-    @static_call('network.autocomplete')
-    def autocomplete(**kwargs):
-        return kwargs, _format_result_network
-
-    @static_call('network.getList')
-    def getList(**kwargs):
-        kwargs = _convert_iobj(kwargs, 'user')
-        return kwargs, _format_result_network
-
-    @static_call('network.docs.getRecent')
-    def docs_getRecent(**kwargs):
-        return kwargs, _format_result_docs
-
-
-class Group(IpernityObject):
-    __id__ = 'group_id'
-    __display__ = ['id', 'title']
-    __convertors__ = [
-        (['can', 'visibility'], _dict_conv(_str2bool)),
-        (['quota', 'count'], _dict_str2int),
-        (['dates'], _dict_conv(_ts2datetime)),
-        (['you'], _conv_you),
-    ]
-
-    @static_call('group.getList')
-    def getList(**kwargs):
-        kwargs = _convert_iobj(kwargs, 'user')
-        return kwargs, _format_result_groups
-
-    @static_call('group.search')
-    def search(**kwargs):
-        return kwargs, _format_result_groups
-
-    @call('group.get')
-    def get(self, **kwargs):
-        return kwargs, lambda r: Group(**r['group'])
-
-    @call('group.get')
-    def update(self, **kwargs):
-        return kwargs, lambda r: self._set_props(**r['group'])
-
-    def _docs_add_remove(self, **kwargs):
-        def format_result(resp):
-            def format_doc(doc):
-                doc['doc'] = Doc(id=doc.pop('doc_id'))
-                for k in ['added', 'pending', 'error', 'removed']:
-                    if k in doc:
-                        doc[k] = _str2bool(doc[k])
-                return doc
-
-            info = resp['group']
-            info.pop('group_id', None)
-            docs = [format_doc(doc) for doc in info.pop('doc', [])]
-            info = _dict_str2int(info)
-            return IpernityList(docs, info)
-
-        if 'docs' in kwargs:
-            docs = ','.join([d.id if isinstance(d, Doc) else d
-                             for d in kwargs.pop('docs')])
-            kwargs['doc_id'] = docs
-        return kwargs, format_result
-
-    @call('group.docs.add')
-    def docs_add(self, **kwargs):
-        return self._docs_add_remove(**kwargs)
-
-    @call('group.docs.remove')
-    def docs_remove(self, **kwargs):
-        return self._docs_add_remove(**kwargs)
-
-    @call('group.docs.getList')
-    def docs_getList(self, **kwargs):
-        kwargs = _convert_iobj(kwargs, 'user')
-        return kwargs, lambda r: _format_result_docs(r['group'])
-
-    @call('group.docs.getContext')
-    def docs_getContext(self, **kwargs):
-        def format_result(resp):
-            info = resp
-            return {
-                'doc': Doc(**info['doc']),
-                'prev': _resp2ilist('doc', _dict_str2int,
-                                    lambda d: Doc(**d), sec='prev')(info),
-                'next': _resp2ilist('doc', _dict_str2int,
-                                    lambda d: Doc(**d), sec='next')(info),
-                'total': int(info['group']['total']),
-            }
-        kwargs = _convert_iobj(kwargs, 'doc')
-        kwargs = _convert_iobj(kwargs, 'user')
-        return kwargs, format_result
-
-
-class Explore(IpernityObject):
-    @static_call('explore.docs.getPopular')
-    def docs_getPopular(**kwargs):
-        return kwargs, _format_result_docs
-
-    @static_call('explore.docs.getRecent')
-    def docs_getRecent(**kwargs):
-        return kwargs, _format_result_docs
-
-    @static_call('explore.docs.homepage')
-    def docs_homepage(**kwargs):
-        return kwargs, _format_result_docs
-
-    @static_call('explore.groups.getRandom')
-    def groups_getRandom(**kwargs):
-        return kwargs, _format_result_groups
-
-
-class Post(IpernityObject):
-    __id__ = 'post_id'
-
-    @call('post.getFaves')
-    def getFaves(self, **kwargs):
-        return kwargs, _format_result_faves
-
-    @call('post.getVisitors')
-    def getVisitors(self, **kwargs):
-        return kwargs, _format_result_visitors
+    def getTags(self, type='keyword', **kwargs):
+        return Tag.user_getList(user=self, type=type, **kwargs)
