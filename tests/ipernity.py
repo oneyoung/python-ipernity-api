@@ -158,8 +158,8 @@ class IpernityTest(TestCase):
             ipernity.Album.get(id=album_id)
 
     def test_Folder(self):
-        a1 = ipernity.Album.create(title='album1')
-        a2 = ipernity.Album.create(title='album2')
+        # a1 = ipernity.Album.create(title='album1')
+        # a2 = ipernity.Album.create(title='album2')
         folder = ipernity.Folder.create(title='folder title')
         # fields type validation
         self.assertIsInstance(folder.count['albums'], int)
@@ -169,6 +169,12 @@ class IpernityTest(TestCase):
         folder.edit(title='new title', description='new desc')
         self.assertEquals(folder.title, 'new title')
         self.assertEquals(folder.description, 'new desc')
+
+        # getList, userd by user.getFolders
+        ret = self.user.getFolders(empty=1)
+        self.assertTrue(ret.info['total'] > 0)
+        self.assertTrue(all([isinstance(f, ipernity.Folder)
+                             for f in ret]))
 
         folder_id = folder.id
         # after created, folder can retrieve by get

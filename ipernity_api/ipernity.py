@@ -193,6 +193,8 @@ _format_result_faves = _resp2ilist('fave', _dict_str2int, lambda f: {
     'user': User(id=f.get('user_id'), username=f.get('username', '')),
     'faved_at': _ts2datetime(f.get('faved_at', 0)),
 })
+_format_result_folders = _resp2ilist('folder', _dict_str2int,
+                                     lambda f: Folder(**f))
 _format_result_groups = _resp2ilist('group', _dict_str2int,
                                     lambda g: Group(**g))
 _format_result_network = _resp2ilist('user', _dict_str2int,
@@ -251,27 +253,30 @@ class User(IpernityObject):
         kwargs = _replaceid(kwargs, User.__id__)
         return kwargs, lambda r: User(**r['user'])
 
-    @static_call('account.getQuota')
-    def getQuota(**kwargs):
-        return kwargs, lambda r: Quota(**r['quota'])
+    def getAlbums(self, **kwargs):
+        return Album.getList(user=self, **kwargs)
 
     def getDocs(self, **kwargs):
         return Doc.getList(user=self, **kwargs)
 
-    def getAlbums(self, **kwargs):
-        return Album.getList(user=self, **kwargs)
+    def getFolders(self, **kwargs):
+        return Folder.getList(user=self, **kwargs)
 
-    def getTags(self, type='keyword', **kwargs):
-        return Tag.user_getList(user=self, type=type, **kwargs)
-
-    def getPopularTags(self, type='keyword', **kwargs):
-        return Tag.user_getPopular(user=self, type=type, **kwargs)
+    def getGroups(self, **kwargs):
+        return Group.getList(user=self, **kwargs)
 
     def getNetworks(self, **kwargs):
         return Network.getList(user=self, **kwargs)
 
-    def getGroups(self, **kwargs):
-        return Group.getList(user=self, **kwargs)
+    def getPopularTags(self, type='keyword', **kwargs):
+        return Tag.user_getPopular(user=self, type=type, **kwargs)
+
+    @static_call('account.getQuota')
+    def getQuota(**kwargs):
+        return kwargs, lambda r: Quota(**r['quota'])
+
+    def getTags(self, type='keyword', **kwargs):
+        return Tag.user_getList(user=self, type=type, **kwargs)
 
 
 class Quota(IpernityObject):
@@ -483,6 +488,11 @@ class Folder(IpernityObject):
     def get(**kwargs):
         kwargs = _replaceid(kwargs, Folder.__id__)
         return kwargs, lambda r: Folder(**r['folder'])
+
+    @static_call('folder.getList')
+    def getList(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'user')
+        return kwargs, _format_result_folders
 
 
 class Upload(IpernityObject):
