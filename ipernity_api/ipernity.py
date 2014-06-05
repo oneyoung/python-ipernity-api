@@ -470,14 +470,19 @@ class Folder(IpernityObject):
     def create(**kwargs):
         return kwargs, lambda r: Folder(**r['folder'])
 
+    @call('folder.delete')
+    def delete(self, **kwargs):
+        return kwargs, _none
+
+    @call('folder.edit')
+    def edit(self, **kwargs):
+        kwargs = _convert_iobj(kwargs, 'cover')
+        return kwargs, lambda r: self._set_props(**r['folder'])
+
     @static_call('folder.get')
     def get(**kwargs):
         kwargs = _replaceid(kwargs, Folder.__id__)
         return kwargs, lambda r: Folder(**r['folder'])
-
-    @call('folder.delete')
-    def delete(self, **kwargs):
-        return kwargs, _none
 
 
 class Upload(IpernityObject):

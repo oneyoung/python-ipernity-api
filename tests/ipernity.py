@@ -61,7 +61,6 @@ class IpernityTest(TestCase):
 
         # add doc
         ret = album.docs_add(doc=doc1)
-        print ret
         # check result
         self.assertEqual(ret.info['total'], 1)
         self.assertIsInstance(ret[0]['added'], bool)
@@ -75,7 +74,6 @@ class IpernityTest(TestCase):
         ret = album.docs_setList(docs=[doc2, doc1], cover=doc2)
         self.assertEquals(ret.info['cover'].id, doc2.id)
         self.assertIsInstance(ret.info['total'], int)
-        print ret, doc1.id
         self.assertTrue(any([doc1.id == d['doc'].id for d in ret]))
 
         # docs_getContext
@@ -160,10 +158,17 @@ class IpernityTest(TestCase):
             ipernity.Album.get(id=album_id)
 
     def test_Folder(self):
+        a1 = ipernity.Album.create(title='album1')
+        a2 = ipernity.Album.create(title='album2')
         folder = ipernity.Folder.create(title='folder title')
         # fields type validation
         self.assertIsInstance(folder.count['albums'], int)
         self.assertIsInstance(folder.dates['created_at'], datetime.datetime)
+
+        # edit
+        folder.edit(title='new title', description='new desc')
+        self.assertEquals(folder.title, 'new title')
+        self.assertEquals(folder.description, 'new desc')
 
         folder_id = folder.id
         # after created, folder can retrieve by get
