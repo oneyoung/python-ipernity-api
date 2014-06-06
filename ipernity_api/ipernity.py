@@ -3,7 +3,7 @@ import time
 import re
 from UserList import UserList
 from .errors import IpernityError
-from .reflection import call, static_call
+from .reflection import call, static_call, AutoDoc
 
 
 class IpernityList(UserList):
@@ -19,6 +19,7 @@ class IpernityList(UserList):
 
 
 class IpernityObject(object):
+    __metaclass__ = AutoDoc
     # convertors is a list of tuple ([attr1, attr2, ...], conv_func)
     __convertors__ = []
     # replace is a list consist of (oldname, newname, conv_func)
@@ -597,9 +598,11 @@ class Doc(IpernityObject):
 
     # comments
     def comments_add(self, **kwargs):
+        ''' Add a comment to the doc '''
         return Comment.add(doc=self, **kwargs)
 
     def comments_getList(self, **kwargs):
+        ''' Get comments asssociated with the doc '''
         return Comment.getList(doc=self, **kwargs)
 
     # notes
@@ -957,6 +960,7 @@ class Ticket(IpernityObject):
     ]
 
     def refresh(self):
+        ''' refresh the ticket '''
         new = Upload.checkTickets(tickets=[self])[0]
         meta = {}
         for attr in ['done', 'invalid', 'doc_id', 'eta']:
@@ -987,6 +991,7 @@ class Ticket(IpernityObject):
             raise IpernityError('Timeout for wait done after %ss' % timeout)
 
     def getDoc(self):
+        ''' get the Doc from the uploaded ticket '''
         self.wait_done()
         doc_id = self.doc.id
         return Doc.get(id=doc_id)
@@ -1023,21 +1028,27 @@ class User(IpernityObject):
         return kwargs, lambda r: User(**r['user'])
 
     def getAlbums(self, **kwargs):
+        ''' get Albums of user '''
         return Album.getList(user=self, **kwargs)
 
     def getDocs(self, **kwargs):
+        ''' get Docs of user '''
         return Doc.getList(user=self, **kwargs)
 
     def getFolders(self, **kwargs):
+        ''' get Folders of user '''
         return Folder.getList(user=self, **kwargs)
 
     def getGroups(self, **kwargs):
+        ''' get Groups of user '''
         return Group.getList(user=self, **kwargs)
 
     def getNetworks(self, **kwargs):
+        ''' get Networks of user '''
         return Network.getList(user=self, **kwargs)
 
     def getPopularTags(self, type='keyword', **kwargs):
+        ''' get Popular Tags of user '''
         return Tag.user_getPopular(user=self, type=type, **kwargs)
 
     @static_call('account.getQuota')
@@ -1045,4 +1056,5 @@ class User(IpernityObject):
         return kwargs, lambda r: Quota(**r['quota'])
 
     def getTags(self, type='keyword', **kwargs):
+        ''' get Tags of user '''
         return Tag.user_getList(user=self, type=type, **kwargs)
