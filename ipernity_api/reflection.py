@@ -160,7 +160,7 @@ def method_doc(method, ignore_params=[]):
     text = text.replace('<code>', "'").replace('</code>', "'")
     text = text.replace('<ul>', "").replace('</ul>', "")
     text = text.replace('<li>', " " * 12).replace('</li>', "")
-    return text
+    return text.encode('ascii', errors='ignore')
 
 
 class AutoDoc(type):

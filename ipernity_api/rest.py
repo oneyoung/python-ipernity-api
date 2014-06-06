@@ -28,7 +28,6 @@ def call_api(api_method, api_key=None, api_secret=None, signed=False,
             some methods only support GET request, for example: api.methods.get
 
     Default:
-        * always send request with POST method
         * format is JSON
     '''
     # api_keys handling
