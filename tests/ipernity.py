@@ -1,7 +1,8 @@
 import os
 import datetime
+import ipernity_api as ipernity
 from unittest import TestCase
-from ipernity_api import ipernity, errors
+from ipernity_api import errors
 from . import utils
 
 
@@ -10,6 +11,8 @@ def getfile(fname):
 
 
 class IpernityTest(TestCase):
+    # TODO: has no way to test Post
+
     def __init__(self, *arg, **kwargs):
         TestCase.__init__(self, *arg, **kwargs)
         utils.auto_auth()
@@ -59,18 +62,47 @@ class IpernityTest(TestCase):
         self.assertIsInstance(album.cover, ipernity.Doc)
         self.assertEquals(doc1.id, album.cover.id)
 
-        # getList test
-        ret = ipernity.Album.getList(user=self.user)
-        self.assertTrue(ret.info['total'] > 0)
-        self.assertTrue(any([a.id == album.id for a in ret]))
-
         # add doc
         ret = album.docs_add(doc=doc1)
         # check result
         self.assertEqual(ret.info['total'], 1)
         self.assertIsInstance(ret[0]['added'], bool)
+        # doc.getContainers
+        ret = doc1.getContainers()
+        self.assertTrue(any([a.id == album.id for a in ret['albums']]))
         # add docs
         album.docs_add(docs=[doc1, doc2])
+
+        # docs_setList
+        ret = album.docs_setList(docs=[doc2, doc1], cover=doc2)
+        self.assertEquals(ret.info['cover'].id, doc2.id)
+        self.assertIsInstance(ret.info['total'], int)
+        self.assertTrue(any([doc1.id == d['doc'].id for d in ret]))
+
+        # docs_getContext
+        ret = album.docs_getContext(doc=doc1)
+        self.assertEquals(ret['doc'].id, album.id)
+        self.assertTrue(all([isinstance(d, ipernity.Doc)
+                             for d in ret['prev']]))
+        self.assertTrue(all([isinstance(d, ipernity.Doc)
+                             for d in ret['next']]))
+
+        # getList test
+        ret = ipernity.Album.getList(user=self.user)
+        self.assertTrue(ret.info['total'] > 0)
+        self.assertTrue(any([a.id == album.id for a in ret]))
+
+        # orderList
+        albums = ret.data
+        albums.reverse()
+        ipernity.Album.orderList(albums=albums)
+
+        # setPerms
+        album.setPerms(perm_comment=5)
+
+        # docs_getList
+        ret = album.docs_getList()
+        self.assertTrue(any([d.id == doc1.id for d in ret]))
 
         # Faves Test for Album
         Faves = ipernity.Faves
@@ -119,6 +151,15 @@ class IpernityTest(TestCase):
         album_id = album.id
         # new album can be get
         album = ipernity.Album.get(id=album_id)
+
+        # docs_remove
+        ret = album.docs_remove(docs=[doc1])
+        self.assertIsInstance(ret.info['total'], int)
+        self.assertIsInstance(ret[0]['removed'], bool)
+        self.assertTrue(any([doc1.id == d['doc'].id for d in ret]))
+
+        # delete album
+        # it's wired, once albums has not docs, album delete would not found
         album.delete()
         # after delete, album shoult not found
         with self.assertRaisesRegexp(errors.IpernityAPIError,
@@ -131,14 +172,44 @@ class IpernityTest(TestCase):
         self.assertIsInstance(folder.count['albums'], int)
         self.assertIsInstance(folder.dates['created_at'], datetime.datetime)
 
+        # albums_add
+        a1 = ipernity.Album.create(title='album1')
+        a1.docs_add(docs=self.docs)
+        ret = folder.albums_add(albums=[a1])
+        self.assertTrue(ret.info['total'] > 0)
+        self.assertIsInstance(ret[0]['album'], ipernity.Album)
+        self.assertIsInstance(ret[0]['added'], bool)
+
+        # albums_getList
+        ret = folder.albums_getList()
+        self.assertTrue(any([a.id == a1.id for a in ret]))
+
+        # edit
+        folder.edit(title='new title', description='new desc')
+        self.assertEquals(folder.title, 'new title')
+        self.assertEquals(folder.description, 'new desc')
+
+        # getList, userd by user.getFolders
+        ret = self.user.getFolders(empty=True)
+        self.assertTrue(ret.info['total'] > 0)
+        self.assertTrue(all([isinstance(f, ipernity.Folder)
+                             for f in ret]))
+
+        # orderList
+        ipernity.Folder.orderList(folders=[folder])
+
         folder_id = folder.id
         # after created, folder can retrieve by get
-        # TODO: this fail
-        # folder = ipernity.Folder.get(id=folder_id)
+        folder = ipernity.Folder.get(id=folder_id)
+
+        # Folder.albums_remove
+        folder.albums_remove(albums=[a1])
 
         folder.delete()
         with self.assertRaisesRegexp(errors.IpernityAPIError, 'not found'):
             ipernity.Folder.get(id=folder_id)
+
+        a1.delete()
 
     def test_Upload(self):
         ticket = ipernity.Upload.file(file=getfile('1.jpg'))
@@ -185,6 +256,56 @@ class IpernityTest(TestCase):
         self.assertIsInstance(thumb.h, int)
 
         doc.delete()
+
+    def test_Doc(self):
+        # This method will work someday... (ask us about if you need it)
+        ipernity.Doc.checkMD5(md5s=['1cfe2ec123ac9eb7b6bdb5191c3efd40'])
+
+        # doc.getContext
+        doc = self.docs[1]
+        ret = doc.getContext()
+        self.assertEquals(ret['doc'].id, doc.id)
+        for d in ret['prev']:
+            self.assertIsInstance(d, ipernity.Doc)
+            self.assertIsInstance(d['index'], int)
+        self.assertTrue(all([isinstance(d, ipernity.Doc)
+                             for d in ret['next']]))
+
+        # doc.getMedias
+        ret = doc.getMedias()
+        if ret['thumbs']:
+            self.assertTrue(all([isinstance(t, ipernity.Thumb)
+                                 for t in ret['thumbs']]))
+
+        # doc.getPerms
+        ret = doc.getPerms()
+        self.assertIsInstance(ret['visibility']['ispublic'], int)
+        self.assertIsInstance(ret['permissions']['comment'], int)
+        self.assertIsInstance(ret['can']['fave'], bool)
+
+        # doc.setPerms
+        doc.setPerms(perm_tagme=1)
+
+        # doc.getVisitor
+        doc.getVisitors()
+
+        # doc.setLisence
+        doc.setLicense(license=11)
+
+        # doc.setGeo
+        doc.setGeo(lng=43, lat=78.99)
+
+        # doc.set
+        doc.set(title='new title', description='new desc')
+        self.assertEquals(doc.title, 'new title')
+        self.assertEquals(doc.description, 'new desc')
+
+        # doc.search
+        ret = ipernity.Doc.search(user=self.user, tags=[])
+        self.assertTrue(all([isinstance(d, ipernity.Doc) for d in ret]))
+        ret = ipernity.Doc.search(user=self.user,
+                                  created_max=datetime.datetime.now())
+        self.assertTrue(all([isinstance(d, ipernity.Doc) for d in ret]))
 
     def test_Tag(self):
         doc = self.docs[0]
@@ -328,6 +449,9 @@ class IpernityTest(TestCase):
             ret = group.docs_add(docs=docs)
             self.assertTrue(ret.info['total'] > 0)
             self.assertTrue(any([docs[0].id == r['doc'].id for r in ret]))
+            # doc.getContainers
+            ret = docs[0].getContainers()
+            self.assertTrue(any([g.id == group.id for g in ret['groups']]))
             # docs_getList
             ret = group.docs_getList(user=self.user)
             self.assertTrue(ret.info['total'] > 0)

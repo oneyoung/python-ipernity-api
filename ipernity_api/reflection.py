@@ -29,7 +29,8 @@ def call(api_method):
         "params" is a dict consist of parameters to ipernity api method.
         "format_result" is a function to decode json resonpse.
     * return value of decorated function:
-        api json resonpse will be decoded by "format_result" function and return to caller.
+        api json resonpse will be decoded by "format_result" function
+        and return to caller.
     '''
     # use two level decorator here:
     # level 1: "call" to accept decorator paramter 'api_method'
@@ -57,9 +58,12 @@ def call(api_method):
                 params[idname] = self.id
             # required parameters checking
             if not all([p in params for p in requires]):
-                raise IpernityError('parameters missing, required: %s' % ', '.join(requires))
+                raise IpernityError('parameters missing, required: %s'
+                                    % ', '.join(requires))
             resp = request(**params)
             return format_result(resp)
+        wrapper.ipernity_method = api_method
+        wrapper.static = False
         return wrapper
 
     return decorator
@@ -96,9 +100,79 @@ def static_call(api_method):
             params, format_result = func(*args, **kwargs)
             # required parameters checking
             if not all([p in params for p in requires]):
-                raise IpernityError('parameters missing, required: %s' % ','.join(requires))
+                raise IpernityError('parameters missing, required: %s'
+                                    % ','.join(requires))
             resp = request(**params)
             return format_result(resp)
+        wrapper.ipernity_method = api_method
+        wrapper.static = True
         return StaticCaller(wrapper)
 
     return decorator
+
+
+def method_doc(method, ignore_params=[]):
+    doc = '''
+    API: %(method)s
+    Description: %(desc)s
+    Auth: %(auth)s
+    Permission: %(perms)s
+    %(params)s
+    '''
+    info = __methods__[method]
+    desc = info['title']
+    # resp = info['response']
+    auth = 'Required' if info['authentication']['token'] else 'No Need'
+    perms = ','.join(['%s:%s' % (k, v)
+                      for k, v in info['permissions'].iteritems()]
+                     if info['permissions'] else [])
+    params_required = []
+    params_optional = []
+    for param in info['parameters']:
+        name = param['name']
+        value = param['value']
+        required = param.get('required', 0)
+        if name in ignore_params:
+            continue
+        value.strip()
+        line = '%s: %s' % (name, value)
+        if required:
+            params_required.append(line)
+        else:
+            params_optional.append(line)
+    params = ''
+    if params_required:
+        params_required.sort()
+        params += '\n    Required Parameters:\n        '
+        params += '\n        '.join(params_required)
+    if params_optional:
+        params_optional.sort()
+        params += '\n    Optional Parameters:\n        '
+        params += '\n        '.join(params_optional)
+    context = {
+        'method': method,
+        'desc': desc,
+        'auth': auth,
+        'perms': perms,
+        'params': params,
+    }
+    text = doc % context
+    text = text.replace('<code>', "'").replace('</code>', "'")
+    text = text.replace('<ul>', "").replace('</ul>', "")
+    text = text.replace('<li>', " " * 12).replace('</li>', "")
+    return text.encode('ascii', errors='ignore')
+
+
+class AutoDoc(type):
+    def __new__(meta, classname, bases, classDict):
+        selfname = classDict.get('__id__', None)
+        ignore_params = ['api_key']
+        for k, v in classDict.items():
+            if hasattr(v, 'ipernity_method'):
+                method = v.ipernity_method
+                if v.static:
+                    v.inner_func.__doc__ = method_doc(method, ignore_params)
+                else:
+                    ignore_params.append(selfname)
+                    v.__doc__ = method_doc(method, ignore_params)
+        return type.__new__(meta, classname, bases, classDict)

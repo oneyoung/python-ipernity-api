@@ -330,7 +330,7 @@ class Album(IpernityObject):
     def orderList(**kwargs):
         if 'albums' in kwargs:
             albums = ','.join([a.id if isinstance(a, Album) else a
-                               for a in kwargs.pop('albums')])
+                               for a in kwargs.pop('albums', [])])
             kwargs['album_ids'] = albums
         return kwargs, _none
 
