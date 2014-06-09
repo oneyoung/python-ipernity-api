@@ -28,9 +28,20 @@ python 2.6+
 Installation
 -----------------
 
-#### From source
+From source
+.................
+
 ```
 git clone https://github.com/oneyoung/python-ipernity-api.git
 cd python-ipernity-api
-sudo python2 setup.py install
+sudo python2 setup.py install  # for all user
+python2 setup.py install --user # or for current user
+```
+
+From Pypi
+.................
+
+```
+sudo pip install ipernity_api  # for all user
+pip install ipernity_api --user  # or for current user
 ```
