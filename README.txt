@@ -23,7 +23,6 @@ No extra library or modules dependence, Python itself is enough.
 
 
 ## Installation
------------------
 
 #### From source
 
