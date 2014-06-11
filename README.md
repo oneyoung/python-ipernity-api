@@ -39,6 +39,7 @@ python2 setup.py install --user # or for current user
 sudo pip install ipernity_api  # for all user
 pip install ipernity_api --user  # or for current user
 ```
+See more info on [pypi page](https://pypi.python.org/pypi/ipernity_api)
 
 ## Tutorial
 
