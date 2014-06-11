@@ -562,6 +562,12 @@ class Doc(IpernityObject):
     def getVisitors(self, **kwargs):
         return kwargs, _format_result_visitors
 
+    def replace(self, file, async=False):
+        ''' replace doc with new file '''
+        tk = Upload.replace(doc=self, file=file, async=async)
+        if async:
+            tk.wait_done()
+
     @static_call('doc.search')
     def search(**kwargs):
         for k in ['user', 'album', 'group']:
@@ -1011,6 +1017,11 @@ class Upload(IpernityObject):
                                       for t in tickets])
         return kwargs, _resp2ilist('ticket', _dict_str2int,
                                    lambda d: Ticket(**d))
+
+    @static_call('upload.replace')
+    def replace(**kwargs):
+        kwargs = _convert_iobj(kwargs, 'doc')
+        return kwargs, lambda r: Ticket(id=r['ticket'])
 
 
 class User(IpernityObject):

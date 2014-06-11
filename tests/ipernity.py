@@ -224,6 +224,10 @@ class IpernityTest(TestCase):
         self.assertIn('id', doc_str)
         self.assertIn('title', doc_str)
 
+        # replace test
+        # only pro account support this request
+        # doc.replace(file=getfile('2.jpg'))
+
         # Faves test
         Faves = ipernity.Faves
         # add

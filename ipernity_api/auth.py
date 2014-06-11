@@ -16,10 +16,10 @@ A connection URL is built like this:
 http://www.ipernity.com/apps/authorize?api_key=[api_key]&perm_X=[perm]&api_sig=[api_sig]
     [api_key] : your API key.
     [api_sig] : this request signature built using your secret.
-    [perm_doc] : the requested permission for photos/videos/docs. (read/write/delete).
-    [perm_blog] : the requested permission for articles. (read/write/delete).
-    [perm_network] : the requested permission for the contacts (read/write/delete).
-    [perm_profile] : the requested permission for the user's profile (read/write).
+    [doc] : the requested permission for photos/videos/docs. (read/write/delete).
+    [blog] : the requested permission for articles. (read/write/delete).
+    [network] : the requested permission for the contacts (read/write/delete).
+    [profile] : the requested permission for the user's profile (read/write).
 
 In the case of an authentication request for a desktop application, a frob parameter will have to be added.
 http://www.ipernity.com/apps/authorize?api_key=[api_key]&perm_X=[perm]&frob=[frob]&api_sig=[api_sig]

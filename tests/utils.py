@@ -40,7 +40,6 @@ def auth_in_browser(auth_cls, perms):
             q = urlparse.parse_qs(p.query)
             #auth_token = q['oauth_token'][0]
             #auth_verifier = q['oauth_verifier'][0]
-            print (q)
             # save back to auth handler
             auth_handler.verify()
             # send response to webpage

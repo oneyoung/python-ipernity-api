@@ -12,6 +12,8 @@ def _clean_params(params):
     for k, v in params.items():
         if isinstance(v, bool):
             params[k] = 1 if v else 0
+        if isinstance(v, int):
+            params[k] = str(v)
     return params
 
 
