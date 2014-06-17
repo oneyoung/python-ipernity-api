@@ -9,6 +9,7 @@ Python wrapper for ipernity.com API, inspired by [python-flickr-api](https://git
 * Support OAuth authentication
 * Built-in document of Ipernity API
 * Context sensitive objects, easy to use
+* Simple GET request cache mechanism.
 * Unittest to guarantee code quality
 
 

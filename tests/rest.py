@@ -25,7 +25,8 @@ class RESTTest(TestCase):
         method = 'test.hello'
         # set keys to None, should raise exception
         keys.set_keys(None, None)
-        with self.assertRaisesRegexp(errors.IpernityError, 'No Ipernity API keys'):
+        with self.assertRaisesRegexp(errors.IpernityError,
+                                     'No Ipernity API keys'):
             rest.call_api(method)
 
         # explict pass keys should OK
@@ -39,10 +40,18 @@ class RESTTest(TestCase):
         method = 'auth.getFrob'
         authhandler = auth.AUTH_HANDLER
         auth.set_auth_handler(None)
-        # calling to a signed method without signed request should recive exception
+        # calling to a signed method without signed request
+        # should recive exception
         with self.assertRaisesRegexp(errors.IpernityAPIError, 'Signature'):
             rest.call_api(method)
 
         # this time should OK
         rest.call_api(method, signed=True)
         auth.set_auth_handler(authhandler)
+
+    def test_get_request_cache(self):
+        method = 'test.hello'
+        rest.enable_cache()
+        for i in xrange(20):
+            rest.call_api(method, http_post=False)
+        rest.disable_cache()

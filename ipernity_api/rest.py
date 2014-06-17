@@ -5,7 +5,29 @@ import json
 import hashlib
 from .errors import IpernityError, IpernityAPIError
 from .multipart import posturl
+from .cache import SimpleCache
 from . import keys
+
+CACHE = None
+
+
+def enable_cache(cache_object=None):
+    """ enable caching
+    Parameters:
+    -----------
+    cache_object: object, optional
+        A Django compliant cache object. If None (default), a SimpleCache
+        object is used.
+    """
+    global CACHE
+    CACHE = cache_object or SimpleCache()
+
+
+def disable_cache():
+    """Disable cachine capabilities
+    """
+    global CACHE
+    CACHE = None
 
 
 def _clean_params(params):
@@ -71,7 +93,14 @@ def call_api(api_method, api_key=None, api_secret=None, signed=False,
                 resp_raw = urllib2.urlopen(url, data).read()
         else:  # GET
             url += '?' + data
-            resp_raw = urllib2.urlopen(url).read()
+            # cache only works in GET request
+            if CACHE is None:
+                resp_raw = urllib2.urlopen(url).read()
+            else:
+                resp_raw = CACHE.get(url) or urllib2.urlopen(url).read()
+                if url not in CACHE:
+                    CACHE.set(url, resp_raw)
+
     except Exception, e:
         raise IpernityError(str(e))
 
