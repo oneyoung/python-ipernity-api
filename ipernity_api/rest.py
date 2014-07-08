@@ -1,10 +1,6 @@
-import os
-import urllib
-import urllib2
-import json
+import requests
 import hashlib
 from .errors import IpernityError, IpernityAPIError
-from .multipart import posturl
 from .cache import SimpleCache
 from . import keys
 
@@ -77,45 +73,32 @@ def call_api(api_method, api_key=None, api_secret=None, signed=False,
         if signed:  # signature handling
             api_sig = sign_keys(api_secret, kwargs, api_method)
             kwargs['api_sig'] = api_sig
-    data = urllib.urlencode(kwargs)
 
     # send the request
-    try:
-        # we use urllib2 here, since urllib has some problem when response is
-        # over 8k size
-        if http_post:  # POST
-            if 'file' in kwargs:  # upload file handling
-                fpath = kwargs['file']
-                files = [('file', os.path.basename(fpath),
-                          open(fpath, 'rb').read())]
-                resp_raw = posturl(url, kwargs.items(), files)
-            else:
-                resp_raw = urllib2.urlopen(url, data).read()
-        else:  # GET
-            url += '?' + data
-            # cache only works in GET request
-            if CACHE is None:
-                resp_raw = urllib2.urlopen(url).read()
-            else:
-                resp_raw = CACHE.get(url) or urllib2.urlopen(url).read()
-                if url not in CACHE:
-                    CACHE.set(url, resp_raw)
+    if http_post:  # POST
+        if 'file' in kwargs:  # upload file handling
+            fpath = kwargs['file']
+            files = {'file': open(fpath, 'rb')}
+            r = requests.post(url, data=kwargs, files=files)
+        else:
+            r = requests.post(url, data=kwargs)
+    else:  # GET
+        # cache only works in GET request
+        if CACHE is None:
+            r = requests.get(url, params=kwargs)
+        else:
+            r = CACHE.get(url) or requests.get(url, params=kwargs)
+            if url not in CACHE:
+                CACHE.set(url, r)
+    r.raise_for_status()  # raise error if necessary, response_code != 2xx
 
-    except Exception, e:
-        raise IpernityError(str(e))
-
-    # parse the result
-    try:
-        resp = json.loads(resp_raw)
-    except ValueError, e:
-        raise IpernityError('Json decode error at: %s WITH Payload:\n%s'
-                            % (str(e), resp_raw))
+    resp = r.json()
     # check the response, if error happends, raise exception
     api = resp['api']
     if api['status'] == 'error':
         err_mesg = api['message']
         # add more info to err_mesg
-        err_mesg += '\nAPI: %s \nPayload: %s' % (api_method, data)
+        err_mesg += '\nAPI: %s \nPayload: %s' % (api_method, kwargs)
         err_code = int(api['code'])
         raise IpernityAPIError(err_code, err_mesg)
 
