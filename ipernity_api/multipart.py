@@ -2,6 +2,7 @@
 import httplib
 import mimetypes
 import urlparse
+import io
 
 
 def posturl(url, fields, files):
@@ -34,7 +35,6 @@ def encode_multipart_formdata(fields, files):
     Return (content_type, body) ready for httplib.HTTP instance
     """
     BOUNDARY = '----------ThIs_Is_tHe_bouNdaRY_$'
-    CRLF = '\r\n'
     L = []
     for (key, value) in fields:
         L.append('--' + BOUNDARY)
@@ -48,11 +48,18 @@ def encode_multipart_formdata(fields, files):
         L.append('')
         L.append(value)
     L.append('--' + BOUNDARY + '--')
-    L.append('')
-    # add s.decode('string_escape') to avoid ascii decode error
-    body = CRLF.join([s.decode('string_escape') for s in L])
+
+    # join them together, here use BytesIO to accept file-content
+    body = io.BytesIO()
+    CRLF = '\r\n'.encode('utf-8')
+    for v in L:
+        if isinstance(v, unicode):
+            v = v.encode('utf-8')
+        body.write(v)
+        body.write(CRLF)
+
     content_type = 'multipart/form-data; boundary=%s' % BOUNDARY
-    return content_type, body
+    return content_type, body.getvalue()
 
 
 def get_content_type(filename):

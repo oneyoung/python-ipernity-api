@@ -80,29 +80,26 @@ def call_api(api_method, api_key=None, api_secret=None, signed=False,
     data = urllib.urlencode(kwargs)
 
     # send the request
-    try:
-        # we use urllib2 here, since urllib has some problem when response is
-        # over 8k size
-        if http_post:  # POST
-            if 'file' in kwargs:  # upload file handling
-                fpath = kwargs['file']
-                files = [('file', os.path.basename(fpath),
-                          open(fpath, 'rb').read())]
-                resp_raw = posturl(url, kwargs.items(), files)
-            else:
-                resp_raw = urllib2.urlopen(url, data).read()
-        else:  # GET
-            url += '?' + data
-            # cache only works in GET request
-            if CACHE is None:
-                resp_raw = urllib2.urlopen(url).read()
-            else:
-                resp_raw = CACHE.get(url) or urllib2.urlopen(url).read()
-                if url not in CACHE:
-                    CACHE.set(url, resp_raw)
 
-    except Exception, e:
-        raise IpernityError(str(e))
+    # we use urllib2 here, since urllib has some problem when response is
+    # over 8k size
+    if http_post:  # POST
+        if 'file' in kwargs:  # upload file handling
+            fpath = kwargs['file']
+            files = [('file', os.path.basename(fpath),
+                      open(fpath, 'rb').read())]
+            resp_raw = posturl(url, kwargs.items(), files)
+        else:
+            resp_raw = urllib2.urlopen(url, data).read()
+    else:  # GET
+        url += '?' + data
+        # cache only works in GET request
+        if CACHE is None:
+            resp_raw = urllib2.urlopen(url).read()
+        else:
+            resp_raw = CACHE.get(url) or urllib2.urlopen(url).read()
+            if url not in CACHE:
+                CACHE.set(url, resp_raw)
 
     # parse the result
     try:
