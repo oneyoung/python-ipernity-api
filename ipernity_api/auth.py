@@ -118,7 +118,7 @@ class AuthHandler(object):
         params = {}
         params['api_key'] = self.api_key  # add api_key
         # need to add 'perm_' prefix to permission type
-        perms = {'perm_' + k: v for k, v in self.perms.items()}
+        perms = dict(('perm_' + k, v) for k, v in self.perms.items())
         params.update(perms)  # append permissions
         params.update(kwarg)  # additional parameters
         # auth url need api_sig
@@ -307,7 +307,7 @@ class OAuthAuthHandler(AuthHandler):
         # compose the url
         params = {}
         params['oauth_token'] = self.oauth_token
-        perms = {'perm_' + k: v for k, v in self.perms.items()}
+        perms = dict(('perm_' + k, v) for k, v in self.perms.items())
         params.update(perms)
         url = USER_AUTH_URL + '?' + urllib.urlencode(params)
         return url

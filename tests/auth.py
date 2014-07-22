@@ -1,6 +1,5 @@
-from unittest import TestCase
 from ipernity_api import auth, rest, errors, ipernity
-from .utils import auth_in_browser, auto_auth
+from .utils import auth_in_browser, auto_auth, TestCase
 
 
 class AuthTest(TestCase):
@@ -66,7 +65,7 @@ class AuthTest(TestCase):
     def _test_desktop_auth(self):
         perms = {'doc': 'write'}
         fpath = self.oauth_file
-        #TODO: web said frob is invalid, wired
+        # TODO: web said frob is invalid, wired
         handler = auth_in_browser(auth.DesktopAuthHandler, perms)
         # save handler
         handler.save(fpath)

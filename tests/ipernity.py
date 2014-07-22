@@ -1,7 +1,7 @@
 import os
 import datetime
 import ipernity_api as ipernity
-from unittest import TestCase
+from .utils import TestCase
 from ipernity_api import errors
 from . import utils
 

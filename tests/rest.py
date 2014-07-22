@@ -1,4 +1,4 @@
-from unittest import TestCase
+from .utils import TestCase
 from ipernity_api import rest, errors, keys
 from ipernity_api import auth
 

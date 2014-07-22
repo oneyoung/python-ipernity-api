@@ -160,7 +160,9 @@ def method_doc(method, ignore_params=[]):
     text = text.replace('<code>', "'").replace('</code>', "'")
     text = text.replace('<ul>', "").replace('</ul>', "")
     text = text.replace('<li>', " " * 12).replace('</li>', "")
-    return text.encode('ascii', errors='ignore')
+    # Removed keyword arguments 'errors=' from decode() to support versions of
+    # Python < 2.7
+    return text.encode('ascii', 'ignore')
 
 
 class AutoDoc(type):

@@ -1,6 +1,6 @@
 from ipernity_api.reflection import call, static_call
 from ipernity_api.errors import IpernityError
-from unittest import TestCase
+from .utils import TestCase
 
 
 class ReflectionTest(TestCase):

@@ -4,7 +4,7 @@ with open('README.txt') as f:
     long_description = f.read()
 
 setup(name='ipernity_api',
-      version='0.12',
+      version='0.13',
       description='Python Ipernity API',
       long_description=long_description,
       author='oneyoung',
