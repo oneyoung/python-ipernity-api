@@ -1,5 +1,7 @@
 # python-ipernity-api
 
+[![PyPI version](https://badge.fury.io/py/ipernity_api.svg)](http://badge.fury.io/py/ipernity_api)
+
 Python wrapper for ipernity.com API, inspired by [python-flickr-api](https://github.com/alexis-mignon/python-flickr-api).
 
 
