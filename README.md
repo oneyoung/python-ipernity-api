@@ -19,7 +19,7 @@ By far, just support Python2.
 No extra library or modules dependence, Python itself is enough.
 
 ```
-python 2.6+
+python 2.6.5+
 ```
 
 

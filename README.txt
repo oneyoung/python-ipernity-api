@@ -17,7 +17,7 @@ Main Features
 
 Requirements
 -----------------
-By far, just support Python2.
+By far, just support Python2, and require: python 2.6.5+.
 
 No extra library or modules dependence, Python itself is enough.
 
